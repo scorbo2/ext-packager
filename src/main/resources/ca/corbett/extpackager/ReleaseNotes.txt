@@ -1,0 +1,4 @@
+ExtPackager Release Notes
+Author: Steve Corbett
+
+Version 1.0 [TODO] - Initial release
