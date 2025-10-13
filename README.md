@@ -49,7 +49,7 @@ Your application will then be able to dynamically discover, download, and instal
 
 Yes! That's the whole point! :) By re-running `ext-package` with your new extension(s), or new
 extension version(s), you can generate new version json to be uploaded to your web host, and your
-alread-distributed application can detect the new extension(s) or new version(s) and present them
+already-distributed application can detect the new extension(s) or new version(s) and present them
 for download/upgrade. 
 
 ## What if I release a new application version?
