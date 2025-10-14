@@ -83,6 +83,7 @@ public final class Version {
         aboutInfo.releaseNotesLocation = "/ca/corbett/extpackager/ReleaseNotes.txt";
         aboutInfo.logoImageLocation = "/ca/corbett/extpackager/images/logo_wide.jpg";
         aboutInfo.shortDescription = "Packages source and update json for application extensions.";
+        aboutInfo.logoDisplayMode = AboutInfo.LogoDisplayMode.AS_IS;
 
         String installDir = System.getProperty("INSTALL_DIR", null);
         INSTALL_DIR = installDir == null ? null : new File(installDir);

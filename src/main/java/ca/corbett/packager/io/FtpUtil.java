@@ -58,7 +58,6 @@ public class FtpUtil {
             for (FTPFile file : files) {
                 String currentFileName = file.getName();
 
-                // Skip "." and ".." entries
                 if (currentFileName.equals(".") || currentFileName.equals("..")) {
                     continue;
                 }
@@ -66,18 +65,20 @@ public class FtpUtil {
                 String filePath = parentDir + "/" + currentFileName;
 
                 if (file.isDirectory()) {
-                    // Recursively delete subdirectory contents
                     deleteDirectory(ftpClient, filePath);
-                    // Then remove the empty directory
-                    ftpClient.removeDirectory(filePath);
+                    if (!ftpClient.removeDirectory(filePath)) {
+                        throw new IOException("Failed to delete directory: " + filePath);
+                    }
                 } else {
-                    // Delete file
-                    ftpClient.deleteFile(filePath);
+                    if (!ftpClient.deleteFile(filePath)) {
+                        throw new IOException("Failed to delete file: " + filePath);
+                    }
                 }
             }
         }
 
-        // Finally, delete the parent directory itself
-        ftpClient.removeDirectory(parentDir);
+        if (!ftpClient.removeDirectory(parentDir)) {
+            throw new IOException("Failed to delete directory: " + parentDir);
+        }
     }
 }
