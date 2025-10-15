@@ -1,6 +1,9 @@
 package ca.corbett.packager.ui;
 
 import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.image.ImagePanel;
+import ca.corbett.extras.image.ImagePanelConfig;
+import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.packager.Version;
 
@@ -20,7 +23,10 @@ import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.net.URL;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class MainWindow extends JFrame {
@@ -38,13 +44,15 @@ public class MainWindow extends JFrame {
     private MainWindow() {
         super(Version.APPLICATION_NAME + " " + Version.VERSION);
         desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
-        setSize(new Dimension(600,400));
+        setSize(new Dimension(700, 520));
+        setMinimumSize(new Dimension(500, 350));
         setLayout(new BorderLayout());
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildMenuPanel(), buildContentPanel());
         splitPane.setOneTouchExpandable(false);
         splitPane.setDividerLocation(195);
         add(splitPane, BorderLayout.CENTER);
         addContentPanel(new IntroCard(), "Overview");
+        addContentPanel(new ProjectCard(), "Project");
         addContentPanel(new KeyPairCard(), "Key management");
         addContentPanel(new UpdateSourcesCard(), "Update sources");
         addContentPanel(new VersionManifestCard(), "Version manifest");
@@ -67,6 +75,26 @@ public class MainWindow extends JFrame {
     }
 
     private JPanel buildMenuPanel() {
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        ImagePanel imagePanel = new ImagePanel(ImagePanelConfig.createSimpleReadOnlyProperties());
+        BufferedImage image = null;
+        try {
+            URL url = getClass().getResource("/ca/corbett/extpackager/images/logo_wide.jpg");
+            if (url != null) {
+                image = ImageUtil.loadImage(url);
+                image = ImageUtil.scaleImageToFitSquareBounds(image, 180);
+            }
+        }
+        catch (IOException ioe) {
+            log.log(Level.SEVERE, "Unable to load logo image: " + ioe.getMessage(), ioe);
+        }
+
+        if (image != null) {
+            imagePanel.setPreferredSize(new Dimension(180, 70));
+            imagePanel.setImage(image);
+            wrapperPanel.add(imagePanel, BorderLayout.NORTH);
+        }
+
         JPanel listPanel = new JPanel();
         listPanel.setLayout(new BorderLayout());
 
@@ -86,7 +114,8 @@ public class MainWindow extends JFrame {
             }
         });
 
-        return listPanel;
+        wrapperPanel.add(listPanel, BorderLayout.CENTER);
+        return wrapperPanel;
     }
 
     private JPanel buildContentPanel() {

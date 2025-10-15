@@ -38,12 +38,14 @@ Fire up the application and walk through the UI:
 
 - Generate a key pair (optional)
 - Enumerate and sign your extension jar(s) (signing is optional)
-- Generate the application update json (to be hosted on your web server)
 - Generate the sources json (to be bundled with your application)
+- Generate the application update json (to be hosted on your web server)
 - attach optional screenshots to your extensions
+- upload the results to your web host
 
-From there, you can upload the output directory to your web host and distribute your application!
-Your application will then be able to dynamically discover, download, and install your extensions.
+You can then distribute your application with the sources json included. 
+Your application can use that sources json to dynamically discover, download, install,
+and upgrade your extensions.
 
 ## Can I add new extensions or versions after the application is released?
 
@@ -55,7 +57,7 @@ for download/upgrade.
 ## What if I release a new application version?
 
 Your application will be able to detect that it is no longer the latest version, and can notify
-the user that an upgrade is available. (Auto-application update not yet supported).
+the user that an upgrade is available. (Application self-update not yet supported).
 
 ## License
 

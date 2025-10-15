@@ -34,6 +34,10 @@ public class AppConfig extends AppProperties<AppConfig.NullExtension> {
         return lookAndFeelProp.getSelectedLafClass();
     }
 
+    public LookAndFeelProperty getLookAndFeelProp() {
+        return lookAndFeelProp;
+    }
+
     @Override
     protected List<AbstractProperty> createInternalProperties() {
         List<AbstractProperty> props = new ArrayList<>();
