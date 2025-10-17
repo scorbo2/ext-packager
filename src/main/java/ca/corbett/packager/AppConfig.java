@@ -5,9 +5,11 @@ import ca.corbett.extensions.AppExtensionInfo;
 import ca.corbett.extensions.AppProperties;
 import ca.corbett.extensions.ExtensionManager;
 import ca.corbett.extras.properties.AbstractProperty;
+import ca.corbett.extras.properties.DirectoryProperty;
 import ca.corbett.extras.properties.LookAndFeelProperty;
 import com.formdev.flatlaf.FlatDarkLaf;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +18,7 @@ public class AppConfig extends AppProperties<AppConfig.NullExtension> {
     private static AppConfig instance;
 
     private LookAndFeelProperty lookAndFeelProp;
+    private DirectoryProperty projectBaseDirProp;
 
     private AppConfig() {
         super(Version.APPLICATION_NAME + " " + Version.VERSION,
@@ -38,12 +41,28 @@ public class AppConfig extends AppProperties<AppConfig.NullExtension> {
         return lookAndFeelProp;
     }
 
+    public File getProjectBaseDir() {
+        return projectBaseDirProp.getDirectory();
+    }
+
+    public void setProjectBaseDir(File newDir) {
+        projectBaseDirProp.setDirectory(newDir);
+    }
+
     @Override
     protected List<AbstractProperty> createInternalProperties() {
         List<AbstractProperty> props = new ArrayList<>();
-        lookAndFeelProp = new LookAndFeelProperty("UI.Look and Feel.Look and Feel", "Look and Feel:",
+        lookAndFeelProp = new LookAndFeelProperty("UI.Look and Feel.Look and Feel",
+                                                  "Look and Feel:",
                                                   FlatDarkLaf.class.getName());
         props.add(lookAndFeelProp);
+
+        projectBaseDirProp = new DirectoryProperty("General.General.projectBaseDir",
+                                                   "Project base dir:",
+                                                   true,
+                                                   null);
+        props.add(projectBaseDirProp);
+
         return props;
     }
 

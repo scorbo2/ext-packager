@@ -53,13 +53,19 @@ public class MainWindow extends JFrame {
         add(splitPane, BorderLayout.CENTER);
         addContentPanel(new IntroCard(), "Overview");
         addContentPanel(new ProjectCard(), "Project");
-        addContentPanel(new KeyPairCard(), "Key management");
-        addContentPanel(new UpdateSourcesCard(), "Update sources");
-        addContentPanel(new VersionManifestCard(), "Version manifest");
-        addContentPanel(new JarSigningCard(), "Jar signing");
-        addContentPanel(new FTPUploadCard(), "FTP upload");
         addContentPanel(new AboutCard(), "About");
         cardList.setSelectedIndex(0);
+    }
+
+    /**
+     * Adds the remaining options to our menu now that a project is selected.
+     */
+    public void projectOpened() {
+        addContentPanel(new KeyPairCard(), "Key management", 2);
+        addContentPanel(new UpdateSourcesCard(), "Update sources", 3);
+        addContentPanel(new VersionManifestCard(), "Version manifest", 4);
+        addContentPanel(new JarSigningCard(), "Jar signing", 5);
+        addContentPanel(new FTPUploadCard(), "FTP upload", 6);
     }
 
     public static MainWindow getInstance() {
@@ -70,7 +76,16 @@ public class MainWindow extends JFrame {
     }
 
     private void addContentPanel(JPanel panel, String title) {
-        cardListModel.addElement("  " + title);
+        addContentPanel(panel, title, -1);
+    }
+
+    private void addContentPanel(JPanel panel, String title, int index) {
+        if (index == -1) {
+            cardListModel.addElement("  " + title);
+        }
+        else {
+            cardListModel.insertElementAt("  " + title, index);
+        }
         contentPanel.add(PropertiesDialog.buildScrollPane(panel), title);
     }
 
