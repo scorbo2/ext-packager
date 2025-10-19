@@ -52,7 +52,7 @@ public class MainWindow extends JFrame {
         splitPane.setDividerLocation(195);
         add(splitPane, BorderLayout.CENTER);
         addContentPanel(new IntroCard(), "Overview");
-        addContentPanel(new ProjectCard(), "Project");
+        addContentPanel(ProjectCard.getInstance(), "Project");
         addContentPanel(new AboutCard(), "About");
         cardList.setSelectedIndex(0);
     }
@@ -61,6 +61,9 @@ public class MainWindow extends JFrame {
      * Adds the remaining options to our menu now that a project is selected.
      */
     public void projectOpened() {
+        if (cardListModel.size() > 3) {
+            return; // already done - only do it once
+        }
         addContentPanel(new KeyPairCard(), "Key management", 2);
         addContentPanel(new UpdateSourcesCard(), "Update sources", 3);
         addContentPanel(new VersionManifestCard(), "Version manifest", 4);

@@ -1,9 +1,11 @@
 package ca.corbett.packager.ui;
 
 import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.fields.FileField;
+import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.packager.AppConfig;
 
@@ -26,14 +28,15 @@ public class NewProjectDialog extends JDialog {
     private FormPanel formPanel;
     private ShortTextField nameField;
     private FileField baseDirField;
+    private LabelField projectDirField;
 
     public NewProjectDialog() {
         super(MainWindow.getInstance(), "New Project", true);
-        setSize(new Dimension(new Dimension(575, 205)));
+        setSize(new Dimension(new Dimension(575, 210)));
         setResizable(false);
         setLocationRelativeTo(MainWindow.getInstance());
         setLayout(new BorderLayout());
-        add(buildFormPanel(), BorderLayout.CENTER);
+        add(PropertiesDialog.buildScrollPane(buildFormPanel()), BorderLayout.CENTER);
         add(buildButtonPanel(), BorderLayout.SOUTH);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         wasOkayed = false;
@@ -48,7 +51,7 @@ public class NewProjectDialog extends JDialog {
     }
 
     public File getProjectDir() {
-        return baseDirField.getFile();
+        return new File(baseDirField.getFile(), nameField.getText());
     }
 
     private void closeDialog(boolean wasOkayed) {
@@ -92,20 +95,36 @@ public class NewProjectDialog extends JDialog {
         dispose();
     }
 
+    private void updateProjectDir() {
+        File baseDir = baseDirField.getFile();
+        if (baseDir == null) {
+            projectDirField.setText("");
+            return;
+        }
+        projectDirField.setText(baseDir.getAbsolutePath() + File.separator + nameField.getText());
+    }
+
     private JPanel buildFormPanel() {
         formPanel = new FormPanel(Alignment.TOP_LEFT);
-        formPanel.setBorderMargin(24);
+        formPanel.setBorderMargin(16);
 
         nameField = new ShortTextField("Project name:", 24);
         nameField.setText("New Project");
         nameField.setAllowBlank(false);
+        nameField.addValueChangedListener(field -> updateProjectDir());
         formPanel.add(nameField);
 
+        File projectBaseDir = AppConfig.getInstance().getProjectBaseDir();
         baseDirField = new FileField("Parent dir:",
-                                     AppConfig.getInstance().getProjectBaseDir(),
+                                     projectBaseDir,
                                      24,
                                      FileField.SelectionType.ExistingDirectory);
+        baseDirField.addValueChangedListener(field -> updateProjectDir());
         formPanel.add(baseDirField);
+
+        projectDirField = new LabelField("Project dir:",
+                                         projectBaseDir.getAbsolutePath() + File.separator + "New Project");
+        formPanel.add(projectDirField);
 
         return formPanel;
     }

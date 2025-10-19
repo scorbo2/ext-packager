@@ -3,6 +3,8 @@ package ca.corbett.packager.project;
 import ca.corbett.extras.properties.FileBasedProperties;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * Represents all the settings for a saved project in the ExtPackager application.
@@ -12,17 +14,47 @@ import java.io.File;
  * @author <a href="https://github.com/scorbo2">scorbo2</a>
  */
 public class Project {
+
+    private final Logger log = Logger.getLogger(Project.class.getName());
+
     private String name;
-    private final File projectDir;
     private final FileBasedProperties props;
     private final File distDir;
 
-    public Project(String name, File projectDir) {
+    private Project(String name, FileBasedProperties props) {
         this.name = name;
-        this.projectDir = projectDir;
-        this.distDir = new File(projectDir, "dist");
-        distDir.mkdirs();
-        props = new FileBasedProperties(new File(projectDir, "settings.extpkg"));
+        this.props = props;
+        this.distDir = new File(props.getFile().getParentFile(), "dist");
+    }
+
+    public static Project createNew(String name, File projectDir) throws IOException {
+        File distDir = new File(projectDir, "dist");
+        if (!distDir.exists()) {
+            if (!distDir.mkdirs()) {
+                throw new IOException("Unable to create distribution directory in this location.");
+            }
+        }
+        if (distDir.exists() && !distDir.isDirectory()) {
+            throw new IOException("Distribution directory is corrupt in this location.");
+        }
+        FileBasedProperties props = new FileBasedProperties(new File(projectDir, name + ".extpkg"));
+        props.setString("projectName", name);
+        props.save();
+        return new Project(name, props);
+    }
+
+    public static Project fromFile(File projectFile) throws IOException {
+        File distDir = new File(projectFile.getParentFile(), "dist");
+        if (!distDir.exists() || !distDir.isDirectory()) {
+            throw new IOException("Unable to find the distribution directory in this location.");
+        }
+        FileBasedProperties props = new FileBasedProperties(projectFile);
+        props.load();
+        String name = props.getString("projectName", "");
+        if ("".equals(name)) {
+            throw new IOException("Project file appears corrupt.");
+        }
+        return new Project(name, props);
     }
 
     public String getName() {
@@ -34,6 +66,6 @@ public class Project {
     }
 
     public File getProjectDir() {
-        return projectDir;
+        return props.getFile().getParentFile();
     }
 }
