@@ -109,8 +109,8 @@ public class ProjectCard extends JPanel {
             try {
                 File projectFile = fileChooser.getSelectedFile();
                 Project project = Project.fromFile(projectFile);
-                setProject(project);
                 MainWindow.getInstance().projectOpened();
+                setProject(project);
 
                 AppConfig.getInstance().setProjectBaseDir(projectFile.getParentFile().getParentFile());
                 AppConfig.getInstance().save();
@@ -127,8 +127,8 @@ public class ProjectCard extends JPanel {
         if (dialog.wasOkayed()) {
             try {
                 Project project = Project.createNew(dialog.getProjectName(), dialog.getProjectDir());
-                setProject(project);
                 MainWindow.getInstance().projectOpened();
+                setProject(project);
 
                 AppConfig.getInstance().setProjectBaseDir(dialog.getProjectDir().getParentFile());
                 AppConfig.getInstance().save();

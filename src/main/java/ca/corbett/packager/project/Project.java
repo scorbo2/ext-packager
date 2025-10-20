@@ -1,9 +1,12 @@
 package ca.corbett.packager.project;
 
+import ca.corbett.extras.crypt.SignatureUtil;
 import ca.corbett.extras.properties.FileBasedProperties;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.logging.Logger;
 
 /**
@@ -19,12 +22,59 @@ public class Project {
 
     private String name;
     private final FileBasedProperties props;
+    private final File projectDir;
     private final File distDir;
 
-    private Project(String name, FileBasedProperties props) {
+    private PrivateKey privateKey;
+    private PublicKey publicKey;
+
+    private Project(String name, FileBasedProperties props, PublicKey publicKey, PrivateKey privateKey) {
         this.name = name;
         this.props = props;
+        this.projectDir = props.getFile().getParentFile();
         this.distDir = new File(props.getFile().getParentFile(), "dist");
+        this.publicKey = publicKey;
+        this.privateKey = privateKey;
+    }
+
+    public PrivateKey getPrivateKey() {
+        return privateKey;
+    }
+
+    public void setPrivateKey(PrivateKey privateKey) throws IOException {
+        this.privateKey = privateKey;
+        File privateKeyFile = new File(projectDir, "private.key");
+
+        // Setting null is a wonky case, but if we ever get it, consider it a "delete" request:
+        if (privateKey == null) {
+            if (privateKeyFile.exists()) {
+                privateKeyFile.delete();
+            }
+            return;
+        }
+
+        // Otherwise (key is not null), save it:
+        SignatureUtil.savePrivateKey(privateKey, privateKeyFile);
+    }
+
+    public PublicKey getPublicKey() {
+        return publicKey;
+    }
+
+    public void setPublicKey(PublicKey publicKey) throws IOException {
+        this.publicKey = publicKey;
+        File publicKeyFile = new File(distDir, "public.key");
+
+        // Setting null is a wonky case, but if we ever get it, consider it a "delete" request:
+        if (publicKey == null) {
+            if (publicKeyFile.exists()) {
+                publicKeyFile.delete();
+            }
+            return;
+        }
+
+        // Otherwise (key is not null), save it:
+        SignatureUtil.savePublicKey(publicKey, publicKeyFile);
     }
 
     public static Project createNew(String name, File projectDir) throws IOException {
@@ -40,11 +90,12 @@ public class Project {
         FileBasedProperties props = new FileBasedProperties(new File(projectDir, name + ".extpkg"));
         props.setString("projectName", name);
         props.save();
-        return new Project(name, props);
+        return new Project(name, props, null, null);
     }
 
     public static Project fromFile(File projectFile) throws IOException {
-        File distDir = new File(projectFile.getParentFile(), "dist");
+        File projectDir = projectFile.getParentFile();
+        File distDir = new File(projectDir, "dist");
         if (!distDir.exists() || !distDir.isDirectory()) {
             throw new IOException("Unable to find the distribution directory in this location.");
         }
@@ -54,7 +105,30 @@ public class Project {
         if ("".equals(name)) {
             throw new IOException("Project file appears corrupt.");
         }
-        return new Project(name, props);
+
+        PublicKey publicKey = null;
+        File publicKeyFile = new File(distDir, "public.key");
+        if (publicKeyFile.exists()) {
+            try {
+                publicKey = SignatureUtil.loadPublicKey(publicKeyFile);
+            }
+            catch (Exception e) {
+                throw new IOException("Unable to load public key: " + e.getMessage(), e);
+            }
+        }
+
+        PrivateKey privateKey = null;
+        File privateKeyFile = new File(projectDir, "private.key");
+        if (privateKeyFile.exists()) {
+            try {
+                privateKey = SignatureUtil.loadPrivateKey(privateKeyFile);
+            }
+            catch (Exception e) {
+                throw new IOException("Unable to load private key: " + e.getMessage(), e);
+            }
+        }
+
+        return new Project(name, props, publicKey, privateKey);
     }
 
     public String getName() {
@@ -66,6 +140,10 @@ public class Project {
     }
 
     public File getProjectDir() {
-        return props.getFile().getParentFile();
+        return projectDir;
+    }
+
+    public File getDistDir() {
+        return distDir;
     }
 }
