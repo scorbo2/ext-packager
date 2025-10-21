@@ -2,3 +2,7 @@ ExtPackager Release Notes
 Author: Steve Corbett
 
 Version 1.0 [TODO] - Initial release
+  #1 - Key pair generation
+  #2 - Update sources generation
+  #7 - Project creation and selection
+  

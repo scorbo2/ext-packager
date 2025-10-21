@@ -2,11 +2,14 @@ package ca.corbett.packager.project;
 
 import ca.corbett.extras.crypt.SignatureUtil;
 import ca.corbett.extras.properties.FileBasedProperties;
+import ca.corbett.updates.UpdateSources;
 
 import java.io.File;
 import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -27,6 +30,8 @@ public class Project {
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
+
+    private final List<UpdateSources.UpdateSource> sourcesList = new ArrayList<>();
 
     private Project(String name, FileBasedProperties props, PublicKey publicKey, PrivateKey privateKey) {
         this.name = name;
@@ -75,6 +80,22 @@ public class Project {
 
         // Otherwise (key is not null), save it:
         SignatureUtil.savePublicKey(publicKey, publicKeyFile);
+    }
+
+    public void addUpdateSource(UpdateSources.UpdateSource updateSource) {
+        sourcesList.add(updateSource);
+    }
+
+    public List<UpdateSources.UpdateSource> getSourcesList() {
+        return new ArrayList<>(sourcesList);
+    }
+
+    public void clearUpdateSources() {
+        sourcesList.clear();
+    }
+
+    public void removeUpdateSource(UpdateSources.UpdateSource updateSource) {
+        sourcesList.remove(updateSource);
     }
 
     public static Project createNew(String name, File projectDir) throws IOException {

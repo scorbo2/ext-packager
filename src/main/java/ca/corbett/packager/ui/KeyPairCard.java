@@ -100,7 +100,7 @@ public class KeyPairCard extends JPanel implements ProjectListener {
 
     @Override
     public void projectLoaded(Project project) {
-        PublicKey publicKey = project.getPublicKey();
+        PublicKey publicKey = project == null ? null : project.getPublicKey();
         if (publicKey != null) {
             publicKeyLabel.setText("public.key");
             publicKeyLabel.setHyperlink(new AbstractAction() {
@@ -116,7 +116,7 @@ public class KeyPairCard extends JPanel implements ProjectListener {
             publicKeyLabel.clearHyperlink();
         }
 
-        PrivateKey privateKey = project.getPrivateKey();
+        PrivateKey privateKey = project == null ? null : project.getPrivateKey();
         if (privateKey != null) {
             privateKeyLabel.setText("private.key");
             privateKeyLabel.setHyperlink(new AbstractAction() {
