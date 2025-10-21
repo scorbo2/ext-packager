@@ -4,10 +4,13 @@ import ca.corbett.extras.LookAndFeelManager;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
+import ca.corbett.forms.fields.FormField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ListField;
 import ca.corbett.forms.fields.PanelField;
 import ca.corbett.forms.fields.ShortTextField;
+import ca.corbett.forms.validators.FieldValidator;
+import ca.corbett.forms.validators.ValidationResult;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.updates.UpdateSources;
@@ -31,19 +34,30 @@ import java.util.List;
 
 public class UpdateSourcesCard extends JPanel implements ProjectListener {
 
-    private ShortTextField appNameField;
-    private ListField<UpdateSources.UpdateSource> sourcesListField;
+    private final FormPanel formPanel;
+    private final ShortTextField appNameField;
+    private final ListField<UpdateSources.UpdateSource> sourcesListField;
 
     public UpdateSourcesCard() {
         setLayout(new BorderLayout());
-        FormPanel formPanel = new FormPanel(Alignment.TOP_LEFT);
+        formPanel = new FormPanel(Alignment.TOP_LEFT);
         formPanel.setBorderMargin(new Margins(12));
         formPanel.add(LabelField.createBoldHeaderLabel("Update sources", 20));
 
         appNameField = new ShortTextField("Application name:", 15);
+        appNameField.addValueChangedListener(field -> generateSourcesJson());
+        appNameField.setAllowBlank(false);
         formPanel.add(appNameField);
 
         sourcesListField = new ListField<>("Update sources:", List.of());
+        sourcesListField.addFieldValidator(new FieldValidator<FormField>() {
+            @Override
+            public ValidationResult validate(FormField fieldToValidate) {
+                return sourcesListField.getListModel().getSize() == 0
+                        ? ValidationResult.invalid("You must specify at least one source.")
+                        : ValidationResult.valid();
+            }
+        });
         sourcesListField.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         sourcesListField.setShouldExpand(true);
         sourcesListField.setCellRenderer(new UpdateSourceRenderer());
@@ -89,6 +103,7 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         UpdateSources.UpdateSource updateSource = dialog.getUpdateSource();
         DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
         listModel.addElement(updateSource);
+        generateSourcesJson();
     }
 
     private void editSource() {
@@ -107,6 +122,7 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
         listModel.insertElementAt(dialog.getUpdateSource(), selectedIndexes[0]); // insert new element
         listModel.removeElementAt(selectedIndexes[0] + 1); // remove old element which got bumped by one
+        generateSourcesJson();
     }
 
     private void deleteSource() {
@@ -117,6 +133,19 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         }
         DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
         listModel.removeElementAt(selectedIndexes[0]);
+        generateSourcesJson();
+    }
+
+    private void generateSourcesJson() {
+        if (!formPanel.isFormValid()) {
+            return;
+        }
+        UpdateSources updateSources = new UpdateSources(appNameField.getText());
+        DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
+        for (int i = 0; i < listModel.size(); i++) {
+            updateSources.addUpdateSource(listModel.getElementAt(i));
+        }
+        ProjectCard.getInstance().getProject().setUpdateSources(updateSources);
     }
 
     @Override
@@ -126,11 +155,11 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
         listModel.clear();
 
-        if (project == null) {
+        if (project == null || project.getUpdateSources() == null) {
             return;
         }
 
-        for (UpdateSources.UpdateSource updateSource : project.getSourcesList()) {
+        for (UpdateSources.UpdateSource updateSource : project.getUpdateSources().getUpdateSources()) {
             listModel.addElement(updateSource);
         }
     }

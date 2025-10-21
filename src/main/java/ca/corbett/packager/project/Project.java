@@ -1,15 +1,17 @@
 package ca.corbett.packager.project;
 
 import ca.corbett.extras.crypt.SignatureUtil;
+import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.extras.properties.FileBasedProperties;
 import ca.corbett.updates.UpdateSources;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import java.io.File;
 import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -21,7 +23,7 @@ import java.util.logging.Logger;
  */
 public class Project {
 
-    private final Logger log = Logger.getLogger(Project.class.getName());
+    private static final Logger log = Logger.getLogger(Project.class.getName());
 
     private String name;
     private final FileBasedProperties props;
@@ -31,7 +33,9 @@ public class Project {
     private PrivateKey privateKey;
     private PublicKey publicKey;
 
-    private final List<UpdateSources.UpdateSource> sourcesList = new ArrayList<>();
+    private UpdateSources updateSources;
+
+    private final Gson gson;
 
     private Project(String name, FileBasedProperties props, PublicKey publicKey, PrivateKey privateKey) {
         this.name = name;
@@ -40,6 +44,7 @@ public class Project {
         this.distDir = new File(props.getFile().getParentFile(), "dist");
         this.publicKey = publicKey;
         this.privateKey = privateKey;
+        this.gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
     public PrivateKey getPrivateKey() {
@@ -82,20 +87,38 @@ public class Project {
         SignatureUtil.savePublicKey(publicKey, publicKeyFile);
     }
 
-    public void addUpdateSource(UpdateSources.UpdateSource updateSource) {
-        sourcesList.add(updateSource);
+    public UpdateSources getUpdateSources() {
+        return updateSources;
     }
 
-    public List<UpdateSources.UpdateSource> getSourcesList() {
-        return new ArrayList<>(sourcesList);
+    public void loadUpdateSources() {
+        updateSources = null;
+        File updateSourcesFile = new File(projectDir, "update_sources.json");
+        if (updateSourcesFile.exists()) {
+            try {
+                updateSources = gson.fromJson(FileSystemUtil.readFileToString(updateSourcesFile), UpdateSources.class);
+            }
+            catch (IOException ioe) {
+                log.log(Level.SEVERE, "Problem reading update_sources.json: " + ioe.getMessage(), ioe);
+            }
+        }
     }
 
-    public void clearUpdateSources() {
-        sourcesList.clear();
-    }
-
-    public void removeUpdateSource(UpdateSources.UpdateSource updateSource) {
-        sourcesList.remove(updateSource);
+    public void setUpdateSources(UpdateSources updateSources) {
+        this.updateSources = updateSources;
+        File updateSourcesFile = new File(projectDir, "update_sources.json");
+        if (updateSources == null) {
+            if (updateSourcesFile.exists()) {
+                updateSourcesFile.delete();
+            }
+            return;
+        }
+        try {
+            FileSystemUtil.writeStringToFile(gson.toJson(updateSources), updateSourcesFile);
+        }
+        catch (IOException ioe) {
+            log.log(Level.SEVERE, "Problem writing update_sources.json: " + ioe.getMessage(), ioe);
+        }
     }
 
     public static Project createNew(String name, File projectDir) throws IOException {
@@ -149,7 +172,10 @@ public class Project {
             }
         }
 
-        return new Project(name, props, publicKey, privateKey);
+        Project project = new Project(name, props, publicKey, privateKey);
+        project.loadUpdateSources();
+
+        return project;
     }
 
     public String getName() {
