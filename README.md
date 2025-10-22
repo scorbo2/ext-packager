@@ -37,7 +37,7 @@ The `ext-package` application can handle all of this for you (including key pair
 Fire up the application and walk through the UI:
 
 - Generate a key pair (optional)
-- Enumerate and sign your extension jar(s) (signing is optional)
+- Enumerate and sign your extension jar(s) (signing is optional, but recommended)
 - Generate the sources json (to be bundled with your application)
 - Generate the application update json (to be hosted on your web server)
 - attach optional screenshots to your extensions
