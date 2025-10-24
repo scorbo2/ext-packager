@@ -67,7 +67,7 @@ public final class Version {
     public static final File APP_CONFIG_FILE;
 
     /** The project Url. **/
-    public static String PROJECT_URL = "https://github.com/scorbo2/ext-package";
+    public static String PROJECT_URL = "https://github.com/scorbo2/ext-packager";
 
     /** The project license. **/
     public static String LICENSE = "https://opensource.org/license/mit";
