@@ -4,6 +4,7 @@ import ca.corbett.extras.crypt.SignatureUtil;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.extras.properties.FileBasedProperties;
 import ca.corbett.updates.UpdateSources;
+import ca.corbett.updates.VersionManifest;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -34,6 +35,7 @@ public class Project {
     private PublicKey publicKey;
 
     private UpdateSources updateSources;
+    private VersionManifest versionManifest;
 
     private final Gson gson;
 
@@ -121,6 +123,40 @@ public class Project {
         }
     }
 
+    public VersionManifest getVersionManifest() {
+        return versionManifest;
+    }
+
+    private void loadVersionManifest() {
+        versionManifest = null;
+        File manifestFile = new File(distDir, "version_manifest.json");
+        if (manifestFile.exists()) {
+            try {
+                versionManifest = gson.fromJson(FileSystemUtil.readFileToString(manifestFile), VersionManifest.class);
+            }
+            catch (IOException ioe) {
+                log.log(Level.SEVERE, "Problem reading version_manifest.json: " + ioe.getMessage(), ioe);
+            }
+        }
+    }
+
+    public void setVersionManifest(VersionManifest manifest) {
+        this.versionManifest = manifest;
+        File manifestFile = new File(distDir, "version_manifest.json");
+        if (versionManifest == null) {
+            if (manifestFile.exists()) {
+                manifestFile.delete();
+            }
+            return;
+        }
+        try {
+            FileSystemUtil.writeStringToFile(gson.toJson(versionManifest), manifestFile);
+        }
+        catch (IOException ioe) {
+            log.log(Level.SEVERE, "Problem writing version_manifest.json: " + ioe.getMessage(), ioe);
+        }
+    }
+
     public static Project createNew(String name, File projectDir) throws IOException {
         File distDir = new File(projectDir, "dist");
         if (!distDir.exists()) {
@@ -174,6 +210,7 @@ public class Project {
 
         Project project = new Project(name, props, publicKey, privateKey);
         project.loadUpdateSources();
+        project.loadVersionManifest();
 
         return project;
     }

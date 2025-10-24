@@ -150,7 +150,10 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
 
     @Override
     public void projectLoaded(Project project) {
-        appNameField.setText(project == null ? "" : project.getName());
+        // Dumb initial value in case the proper application name is not set:
+        if (project == null || project.getUpdateSources() == null) {
+            appNameField.setText("");
+        }
 
         DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
         listModel.clear();
@@ -162,6 +165,9 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         for (UpdateSources.UpdateSource updateSource : project.getUpdateSources().getUpdateSources()) {
             listModel.addElement(updateSource);
         }
+
+        // Now we can set a more intelligent default value for application name:
+        appNameField.setText(project.getUpdateSources().getApplicationName());
     }
 
     private static class UpdateSourceRenderer extends JLabel implements ListCellRenderer<UpdateSources.UpdateSource> {
