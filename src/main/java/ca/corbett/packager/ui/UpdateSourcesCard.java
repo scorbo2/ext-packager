@@ -174,7 +174,12 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
 
         @Override
         public Component getListCellRendererComponent(JList<? extends UpdateSources.UpdateSource> list, UpdateSources.UpdateSource value, int index, boolean isSelected, boolean cellHasFocus) {
-            setText(value.getName());
+            String baseUrl = "";
+            String manifestUrl = value.getVersionManifestUrl().toString();
+            if (manifestUrl.contains("/")) {
+                baseUrl = ": " + manifestUrl.substring(0, manifestUrl.lastIndexOf("/") + 1);
+            }
+            setText(value.getName() + baseUrl);
             setOpaque(true);
             Color selectedFg = LookAndFeelManager.getLafColor("List.selectionForeground", Color.WHITE);
             Color selectedBg = LookAndFeelManager.getLafColor("List.selectionBackground", Color.BLUE);

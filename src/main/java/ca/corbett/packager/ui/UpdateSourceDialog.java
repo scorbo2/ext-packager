@@ -1,7 +1,9 @@
 package ca.corbett.packager.ui;
 
+import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
+import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.forms.validators.FieldValidator;
 import ca.corbett.forms.validators.ValidationResult;
@@ -22,16 +24,17 @@ public class UpdateSourceDialog extends JDialog {
     private boolean wasOkayed;
     private FormPanel formPanel;
     private ShortTextField nameField;
-    private ShortTextField manifestField;
-    private ShortTextField publicKeyField;
+    private ShortTextField baseUrlField;
+    private LabelField manifestField;
+    private LabelField publicKeyField;
 
     public UpdateSourceDialog(String title) {
         super(MainWindow.getInstance(), title, true);
-        setSize(new Dimension(450, 220));
+        setSize(new Dimension(450, 245));
         setResizable(false);
         setLocationRelativeTo(MainWindow.getInstance());
         setLayout(new BorderLayout());
-        add(buildFormPanel(), BorderLayout.CENTER);
+        add(PropertiesDialog.buildScrollPane(buildFormPanel()), BorderLayout.CENTER);
         add(buildButtonPanel(), BorderLayout.SOUTH);
     }
 
@@ -68,6 +71,12 @@ public class UpdateSourceDialog extends JDialog {
         else {
             publicKeyField.setText(updateSource.getPublicKeyUrl().toString());
         }
+        String baseUrl = "";
+        if (manifestField.getText().contains("/")) {
+            String manifestUrl = manifestField.getText();
+            baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/") + 1);
+        }
+        baseUrlField.setText(baseUrl);
     }
 
     private void buttonHandler(boolean okay) {
@@ -78,6 +87,19 @@ public class UpdateSourceDialog extends JDialog {
         dispose();
     }
 
+    /**
+     * Invoked when text is typed in the base url field.
+     * We create our version manifest url and public key url accordingly.
+     */
+    private void updateJsonUrls() {
+        String baseUrl = baseUrlField.getText();
+        if (!baseUrl.endsWith("/")) {
+            baseUrl = baseUrl + "/";
+        }
+        manifestField.setText(baseUrl + "version_manifest.json");
+        publicKeyField.setText(baseUrl + "public.key");
+    }
+
     private JPanel buildFormPanel() {
         formPanel = new FormPanel(Alignment.TOP_LEFT);
         formPanel.setBorderMargin(16);
@@ -86,13 +108,16 @@ public class UpdateSourceDialog extends JDialog {
         nameField.setAllowBlank(false);
         formPanel.add(nameField);
 
-        manifestField = new ShortTextField("Manifest URL:", 20);
-        manifestField.addFieldValidator(new URLValidator(false));
-        manifestField.setAllowBlank(false);
+        baseUrlField = new ShortTextField("Base URL:", 20);
+        baseUrlField.setAllowBlank(false);
+        baseUrlField.addFieldValidator(new URLValidator(false));
+        baseUrlField.addValueChangedListener(field -> updateJsonUrls());
+        formPanel.add(baseUrlField);
+
+        manifestField = new LabelField("Manifest URL:", "");
         formPanel.add(manifestField);
 
-        publicKeyField = new ShortTextField("Public key URL:", 20);
-        publicKeyField.addFieldValidator(new URLValidator(true));
+        publicKeyField = new LabelField("Public key URL:", "");
         formPanel.add(publicKeyField);
 
         return formPanel;
