@@ -27,6 +27,14 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.logging.Logger;
 
+/**
+ * This card provides a way to generate a key pair for signing extension jars before they are
+ * uploaded. Signing is optional but recommended. If this project already has a key pair,
+ * you can regenerate it here, but be aware that this requires re-signing and re-uploading
+ * ALL extension jars.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class KeyPairCard extends JPanel implements ProjectListener {
 
     private static final Logger log = Logger.getLogger(KeyPairCard.class.getName());
@@ -59,6 +67,10 @@ public class KeyPairCard extends JPanel implements ProjectListener {
         ProjectCard.getInstance().addProjectListener(this);
     }
 
+    /**
+     * Invoked internally to generate a key pair for use with this project.
+     * If a key pair already exists, the user is prompted for confirmation to replace it.
+     */
     private void generateKeyPair() {
         Project currentProject = ProjectCard.getInstance().getProject();
         if (currentProject.getPublicKey() != null || currentProject.getPrivateKey() != null) {
@@ -84,6 +96,11 @@ public class KeyPairCard extends JPanel implements ProjectListener {
         }
     }
 
+    /**
+     * Invoked internally to show the contents of the given text-based file.
+     * No checking is done here to ensure the given file only contains text,
+     * or to ensure that it is reasonably small enough to load and show like this!
+     */
     private void showTextFromFile(String label, File file) {
         try {
             PopupTextDialog dialog = new PopupTextDialog(MainWindow.getInstance(),
@@ -99,6 +116,11 @@ public class KeyPairCard extends JPanel implements ProjectListener {
         }
     }
 
+    /**
+     * We listen for changes to the currently selected Project - when a project is created
+     * or opened, this method is invoked, and we use it to populate our public and private
+     * key fields.
+     */
     @Override
     public void projectLoaded(Project project) {
         PublicKey publicKey = project == null ? null : project.getPublicKey();

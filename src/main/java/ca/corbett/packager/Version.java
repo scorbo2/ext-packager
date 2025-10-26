@@ -7,9 +7,6 @@ import java.io.File;
 /**
  * Constants concerning the application name and version information,
  * along with properties describing the location of the application config dir.
- *
- * @author scorbo2
- * @since 2017-11-28
  */
 public final class Version {
 

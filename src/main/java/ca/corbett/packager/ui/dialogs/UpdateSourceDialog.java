@@ -20,6 +20,11 @@ import java.awt.FlowLayout;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+/**
+ * Represents a dialog for creating a new UpdateSource, or editing an existing one.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class UpdateSourceDialog extends JDialog {
 
     private boolean wasOkayed;

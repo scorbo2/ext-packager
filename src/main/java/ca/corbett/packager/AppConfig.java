@@ -13,6 +13,11 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Organizes and persists user settings.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class AppConfig extends AppProperties<AppConfig.NullExtension> {
 
     private static AppConfig instance;
@@ -66,6 +71,10 @@ public class AppConfig extends AppProperties<AppConfig.NullExtension> {
         return props;
     }
 
+    /**
+     * Our parent class expects us to also allow extensions, but this application currently
+     * doesn't have any and probably never will, so we'll fake it out with a dummy NullExtension class.
+     */
     public static class NullExtension extends AppExtension {
 
         @Override
@@ -83,7 +92,10 @@ public class AppConfig extends AppProperties<AppConfig.NullExtension> {
         }
     }
 
+    /**
+     * Our parent class also expects an ExtensionManager, but seeing as how we have no extensions,
+     * we don't really need this either.
+     */
     private static class NullExtensionManager extends ExtensionManager<NullExtension> {
-
     }
 }

@@ -29,6 +29,12 @@ import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Represents the main UI for this application, and provides access to all of the cards
+ * that the user will interact with.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class MainWindow extends JFrame {
 
     private static final Logger log = Logger.getLogger(MainWindow.class.getName());
@@ -68,7 +74,7 @@ public class MainWindow extends JFrame {
         addContentPanel(new UpdateSourcesCard(), "Update sources", 3);
         addContentPanel(new VersionManifestCard(), "Version manifest", 4);
         addContentPanel(new JarSigningCard(), "Jar signing", 5);
-        addContentPanel(new FTPUploadCard(), "FTP upload", 6);
+        addContentPanel(new UploadCard(), "Upload", 6);
     }
 
     public static MainWindow getInstance() {
@@ -142,10 +148,18 @@ public class MainWindow extends JFrame {
         return contentPanel;
     }
 
+    /**
+     * Some JREs don't allow launching a hyperlink to open the browser.
+     */
     public boolean isBrowsingSupported() {
         return desktop != null && desktop.isSupported(Desktop.Action.BROWSE);
     }
 
+    /**
+     * If hyperlink launching is supported, will open the user's default browser to the
+     * given link (assuming the link is valid). If the JRE doesn't allow such things,
+     * then the given link will be copied to the clipboard instead (better than nothing).
+     */
     public void openHyperlink(String link) {
         if (isBrowsingSupported()) {
             try {
@@ -158,8 +172,7 @@ public class MainWindow extends JFrame {
         else {
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(new StringSelection(link), null);
-            getMessageUtil().info(
-                    "Hyperlinks are apparently not enabled in your JRE.\nLink copied to clipboard instead.");
+            getMessageUtil().info("Hyperlinks are not enabled in your JRE.\nLink copied to clipboard instead.");
         }
     }
 

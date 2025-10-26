@@ -16,6 +16,12 @@ import javax.swing.JPanel;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 
+/**
+ * This introductory card provides basic instructions, and a selector for choosing the
+ * desired look and feel for this ext-packager app.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class IntroCard extends JPanel {
 
     public IntroCard() {

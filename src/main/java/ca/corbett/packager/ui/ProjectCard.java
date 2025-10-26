@@ -24,6 +24,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+/**
+ * This card allows creation or loading of an ext-packager project.
+ * This card is singleton, and allows adding of ProjectListeners, so that
+ * callers know when a new project is added. This card also maintains
+ * a handle on the currently loaded Project, if any.
+ * <pre>
+ * // Get a handle on the current Project from anywhere:
+ * Project project = ProjectCard.getInstance().getProject();
+ * if (project != null) {
+ *     // read it, update it, etc
+ * }
+ * </pre>
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class ProjectCard extends JPanel {
 
     private final Logger log = Logger.getLogger(ProjectCard.class.getName());
@@ -33,8 +48,8 @@ public class ProjectCard extends JPanel {
     private final List<ProjectListener> projectListeners = new ArrayList<>();
     private Project project = null;
 
-    private LabelField projectNameField;
-    private LabelField projectDirField;
+    private final LabelField projectNameField;
+    private final LabelField projectDirField;
 
     private ProjectCard() {
         setLayout(new BorderLayout());
@@ -70,10 +85,18 @@ public class ProjectCard extends JPanel {
         return instance;
     }
 
+    /**
+     * Returns the currently loaded Project, or null if no selection has been made yet.
+     */
     public Project getProject() {
         return project;
     }
 
+    /**
+     * Registers to receive project notifications from this card. Most notably, you
+     * can find out when a Project has been created/loaded. Other cards use this to
+     * populate their fields based on whatever Project we're dealing with.
+     */
     public void addProjectListener(ProjectListener listener) {
         projectListeners.add(listener);
     }
@@ -91,6 +114,9 @@ public class ProjectCard extends JPanel {
         }
     }
 
+    /**
+     * Invoked internally to show a file chooser for opening an existing project from disk.
+     */
     private void showBrowseProjectDialog() {
         JFileChooser fileChooser = new JFileChooser(AppConfig.getInstance().getProjectBaseDir());
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
@@ -113,6 +139,7 @@ public class ProjectCard extends JPanel {
                 MainWindow.getInstance().projectOpened();
                 setProject(project);
 
+                // Remember this file browse location for next time:
                 AppConfig.getInstance().setProjectBaseDir(projectFile.getParentFile().getParentFile());
                 AppConfig.getInstance().save();
             }
@@ -122,6 +149,9 @@ public class ProjectCard extends JPanel {
         }
     }
 
+    /**
+     * Invoked internally to show the dialog for creating a new ext-packager Project.
+     */
     private void showNewProjectDialog() {
         NewProjectDialog dialog = new NewProjectDialog();
         dialog.setVisible(true);

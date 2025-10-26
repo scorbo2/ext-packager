@@ -33,6 +33,13 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
 
+/**
+ * This card allows viewing and editing of the update sources for the current project.
+ * There are no limit to the number of update sources a project can have.
+ * Each update source can either be web-based or filesystem based.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class UpdateSourcesCard extends JPanel implements ProjectListener {
 
     private final FormPanel formPanel;
@@ -74,7 +81,7 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
 
         PanelField buttonPanel = new PanelField(new FlowLayout(FlowLayout.LEFT));
         JButton button = new JButton("Add");
-        button.addActionListener(e -> addSource());
+        button.addActionListener(e -> createSource());
         button.setPreferredSize(new Dimension(90, 24));
         buttonPanel.getPanel().add(button);
 
@@ -95,7 +102,10 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         ProjectCard.getInstance().addProjectListener(this);
     }
 
-    private void addSource() {
+    /**
+     * Shows a dialog which allows creating a new update source.
+     */
+    private void createSource() {
         UpdateSourceDialog dialog = new UpdateSourceDialog("Add update source");
         dialog.setVisible(true);
         if (!dialog.wasOkayed()) {
@@ -107,6 +117,10 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         generateSourcesJson();
     }
 
+    /**
+     * Shows a dialog which allows editing the details of an existing update source.
+     * Requires an existing update source to be selected in the sources list.
+     */
     private void editSource() {
         int[] selectedIndexes = sourcesListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
@@ -126,6 +140,9 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         generateSourcesJson();
     }
 
+    /**
+     * Deletes the currently selected update source, assuming one is selected in the list.
+     */
     private void deleteSource() {
         int[] selectedIndexes = sourcesListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
@@ -137,6 +154,9 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         generateSourcesJson();
     }
 
+    /**
+     * Invoked internally to generate the source json for the current list of update sources.
+     */
     private void generateSourcesJson() {
         if (!formPanel.isFormValid()) {
             return;
@@ -149,6 +169,10 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         ProjectCard.getInstance().getProject().setUpdateSources(updateSources);
     }
 
+    /**
+     * We listen for Project events, so that we can load our update sources list from a Project
+     * when one is opened.
+     */
     @Override
     public void projectLoaded(Project project) {
         // Dumb initial value in case the proper application name is not set:
@@ -171,6 +195,11 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         appNameField.setText(project.getUpdateSources().getApplicationName());
     }
 
+    /**
+     * A custom ListRenderer that will display an UpdateSource in a user-friendly way.
+     *
+     * @author <a href="https://github.com/scorbo2">scorbo2</a>
+     */
     private static class UpdateSourceRenderer extends JLabel implements ListCellRenderer<UpdateSources.UpdateSource> {
 
         @Override

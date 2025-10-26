@@ -8,6 +8,12 @@ import ca.corbett.forms.fields.LabelField;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
 
+/**
+ * This card provides a way to cryptographically sign all extension jars prior to upload,
+ * and also to verify signatures that have previously been generated.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class JarSigningCard extends JPanel {
 
     public JarSigningCard() {

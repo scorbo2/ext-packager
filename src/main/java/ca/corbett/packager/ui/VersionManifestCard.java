@@ -30,6 +30,14 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
 
+/**
+ * This card allows viewing and editing of the VersionManifest for the current Project.
+ * This allows adding application versions, extensions, extension versions, and screenshots.
+ * All of this ultimately gets packaged up into a version_manifest.json for uploading
+ * to the remote UpdateSource.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class VersionManifestCard extends JPanel implements ProjectListener {
 
     private final FormPanel formPanel;
@@ -89,6 +97,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         ProjectCard.getInstance().addProjectListener(this);
     }
 
+    /**
+     * Pops a dialog for manually creating a new application version.
+     */
     private void createApplicationVersion() {
         ApplicationVersionDialog dialog = new ApplicationVersionDialog("Add application version",
                                                                        appNameField.getText());
@@ -112,6 +123,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         addApplicationVersion(dialog.getApplicationVersion());
     }
 
+    /**
+     * Pops a file browser for automatically importing extension jars.
+     */
     private void importExtensions() {
         // TODO pop a file/directory chooser
         // If a directory is chosen, scan it recursively for all jar files
@@ -132,6 +146,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         generateVersionManifestJson();
     }
 
+    /**
+     * Allows editing the currently selected application version.
+     */
     private void editApplicationVersion() {
         int[] selectedIndexes = appVersionListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
@@ -152,6 +169,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         generateVersionManifestJson();
     }
 
+    /**
+     * Deletes the currently selected application version.
+     */
     private void deleteApplicationVersion() {
         int[] selectedIndexes = appVersionListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
@@ -179,6 +199,10 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         ProjectCard.getInstance().getProject().setVersionManifest(manifest);
     }
 
+    /**
+     * We listen for project events so that when a project is loaded, we can parse out the
+     * version manifest from it and display it here.
+     */
     @Override
     public void projectLoaded(Project project) {
         // Dumb initial value in case the proper application name is not set:
@@ -198,6 +222,11 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         appNameField.setText(project.getVersionManifest().getApplicationName());
     }
 
+    /**
+     * A custom list cell renderer for displaying ApplicationVersion instances in a user-friendly way.
+     *
+     * @author <a href="https://github.com/scorbo2">scorbo2</a>
+     */
     private static class AppVersionListCellRenderer extends JLabel
             implements ListCellRenderer<VersionManifest.ApplicationVersion> {
 

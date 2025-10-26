@@ -8,13 +8,19 @@ import ca.corbett.forms.fields.LabelField;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
 
-public class FTPUploadCard extends JPanel {
+/**
+ * Provides a means to upload all files to a given UpdateSource, either by ftp or
+ * by local filesystem copies, depending on the source.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
+public class UploadCard extends JPanel {
 
-    public FTPUploadCard() {
+    public UploadCard() {
         setLayout(new BorderLayout());
         FormPanel formPanel = new FormPanel(Alignment.TOP_LEFT);
         formPanel.setBorderMargin(new Margins(12));
-        formPanel.add(LabelField.createBoldHeaderLabel("FTP upload", 20));
+        formPanel.add(LabelField.createBoldHeaderLabel("Upload", 20));
 
         add(formPanel, BorderLayout.CENTER);
     }

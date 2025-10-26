@@ -21,6 +21,11 @@ import java.awt.FlowLayout;
 import java.io.File;
 import java.util.logging.Logger;
 
+/**
+ * Represents a dialog that has options for creating a new, empty ext-packager Project.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class NewProjectDialog extends JDialog {
 
     private static final Logger log = Logger.getLogger(NewProjectDialog.class.getName());

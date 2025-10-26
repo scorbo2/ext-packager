@@ -18,6 +18,12 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 
+/**
+ * Shows a dialog for creating a new ApplicationVersion, or editing
+ * an existing one.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class ApplicationVersionDialog extends JDialog {
 
     private boolean wasOkayed;

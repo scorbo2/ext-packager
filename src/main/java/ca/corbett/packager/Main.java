@@ -11,6 +11,12 @@ import java.io.IOException;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
+/**
+ * Main entry point for the application. Currently just shows the UI, but
+ * in future, a CLI may be offered here for batch scripting.
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class Main {
 
     public static void main(String[] args) {
