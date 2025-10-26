@@ -58,7 +58,7 @@ public class MainWindow extends JFrame {
         splitPane.setDividerLocation(195);
         add(splitPane, BorderLayout.CENTER);
         addContentPanel(new IntroCard(), "Overview");
-        addContentPanel(ProjectCard.getInstance(), "Project");
+        addContentPanel(new ProjectCard(), "Project");
         addContentPanel(new AboutCard(), "About");
         cardList.setSelectedIndex(0);
     }

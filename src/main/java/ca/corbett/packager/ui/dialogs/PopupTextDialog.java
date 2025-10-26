@@ -24,8 +24,8 @@ import java.awt.event.ComponentEvent;
  */
 public class PopupTextDialog extends JDialog {
 
-    public static int lastWidth = 400; // arbitrary default
-    public static int lastHeight = 300; // arbitrary default
+    public static int lastWidth = 600; // arbitrary default
+    public static int lastHeight = 400; // arbitrary default
     private JTextArea textArea;
 
     public PopupTextDialog(Dialog owner, String label, String text, boolean isEnabled) {

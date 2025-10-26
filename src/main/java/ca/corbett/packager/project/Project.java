@@ -10,6 +10,7 @@ import com.google.gson.GsonBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.logging.Level;
@@ -20,6 +21,10 @@ import java.util.logging.Logger;
  * A Project here in this application maps 1:1 to an application that you want to distribute.
  * So, a good convention is to name the project after the application in question,
  * but this is not enforced.
+ * <p>
+ *     The singleton ProjectManager class provides handy wrappers around this stuff so that
+ *     callers can always get access to the currently loaded Project.
+ * </p>
  *
  * @author <a href="https://github.com/scorbo2">scorbo2</a>
  */
@@ -51,117 +56,152 @@ public class Project {
         this.distDir = new File(props.getFile().getParentFile(), "dist");
         this.publicKey = publicKey;
         this.privateKey = privateKey;
+        this.updateSources = new UpdateSources(name);
+        this.versionManifest = new VersionManifest();
+        versionManifest.setApplicationName(name);
         this.gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
+    /**
+     * Returns the name of this ext-packager Project.
+     * By convention, this should match the application name, but this is not enforced.
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Sets the name for this ext-packager Project. Will overwrite any previous name.
+     */
+    public void setName(String name) {
+        this.name = name;
+        props.setString("projectName", name);
+        props.saveWithoutException();
+    }
+
+    /**
+     * Returns the containing directory for this Project.
+     */
+    public File getProjectDir() {
+        return projectDir;
+    }
+
+    /**
+     * Returns the distribution dir for this project (this is projectDir/dist).
+     */
+    public File getDistDir() {
+        return distDir;
+    }
+
+    /**
+     * Returns the PrivateKey for this Project, or null if no key pair is set.
+     */
     public PrivateKey getPrivateKey() {
         return privateKey;
     }
 
-    public void setPrivateKey(PrivateKey privateKey) throws IOException {
-        this.privateKey = privateKey;
-        File privateKeyFile = new File(projectDir, "private.key");
-
-        // Setting null is a wonky case, but if we ever get it, consider it a "delete" request:
-        if (privateKey == null) {
-            if (privateKeyFile.exists()) {
-                privateKeyFile.delete();
-            }
-            return;
-        }
-
-        // Otherwise (key is not null), save it:
-        SignatureUtil.savePrivateKey(privateKey, privateKeyFile);
+    /**
+     * Returns the File representing the private key for this project. Note that this file may
+     * or may not exist, depending on whether a key pair has been generated for this Project.
+     * This method will always return a File object, representing the location where the
+     * private key would be stored if it exists even if no key pair has been generated.
+     */
+    public File getPrivateKeyFile() {
+        return new File(projectDir, "private.key");
     }
 
+    /**
+     * Returns the PublicKey for this Project, or null if no key pair is set.
+     */
     public PublicKey getPublicKey() {
         return publicKey;
     }
 
-    public void setPublicKey(PublicKey publicKey) throws IOException {
-        this.publicKey = publicKey;
-        File publicKeyFile = new File(distDir, "public.key");
-
-        // Setting null is a wonky case, but if we ever get it, consider it a "delete" request:
-        if (publicKey == null) {
-            if (publicKeyFile.exists()) {
-                publicKeyFile.delete();
-            }
-            return;
-        }
-
-        // Otherwise (key is not null), save it:
-        SignatureUtil.savePublicKey(publicKey, publicKeyFile);
+    /**
+     * Returns the File representing the public key for this project. Note that this file may
+     * or may not exist, depending on whether a key pair has been generated for this Project.
+     * This method will always return a File object, representing the location where the
+     * public key would be stored if it exists even if no key pair has been generated.
+     */
+    public File getPublicKeyFile() {
+        return new File(distDir, "public.key");
     }
 
+    /**
+     * Sets a new KeyPair for this Project, overwriting any previous public and private key.
+     */
+    public void setKeyPair(KeyPair keyPair) throws IOException {
+        this.privateKey = keyPair.getPrivate();
+        this.publicKey = keyPair.getPublic();
+    }
+
+    /**
+     * Returns the UpdateSources for this Project.
+     */
     public UpdateSources getUpdateSources() {
         return updateSources;
     }
 
-    public void loadUpdateSources() {
-        updateSources = null;
-        File updateSourcesFile = new File(projectDir, "update_sources.json");
-        if (updateSourcesFile.exists()) {
-            try {
-                updateSources = gson.fromJson(FileSystemUtil.readFileToString(updateSourcesFile), UpdateSources.class);
-            }
-            catch (IOException ioe) {
-                log.log(Level.SEVERE, "Problem reading update_sources.json: " + ioe.getMessage(), ioe);
-            }
-        }
+    /**
+     * Returns the File to which the UpdateSources for this project will be saved.
+     */
+    public File getUpdateSourcesFile() {
+        return new File(projectDir, "update_sources.json");
     }
 
+    /**
+     * Sets the UpdateSources for this Project.
+     */
     public void setUpdateSources(UpdateSources updateSources) {
         this.updateSources = updateSources;
-        File updateSourcesFile = new File(projectDir, "update_sources.json");
-        if (updateSources == null) {
-            if (updateSourcesFile.exists()) {
-                updateSourcesFile.delete();
-            }
-            return;
-        }
-        try {
-            FileSystemUtil.writeStringToFile(gson.toJson(updateSources), updateSourcesFile);
-        }
-        catch (IOException ioe) {
-            log.log(Level.SEVERE, "Problem writing update_sources.json: " + ioe.getMessage(), ioe);
-        }
     }
 
+    /**
+     * Returns the VersionManifest for this Project.
+     */
     public VersionManifest getVersionManifest() {
         return versionManifest;
     }
 
-    private void loadVersionManifest() {
-        versionManifest = null;
-        File manifestFile = new File(distDir, "version_manifest.json");
-        if (manifestFile.exists()) {
-            try {
-                versionManifest = gson.fromJson(FileSystemUtil.readFileToString(manifestFile), VersionManifest.class);
-            }
-            catch (IOException ioe) {
-                log.log(Level.SEVERE, "Problem reading version_manifest.json: " + ioe.getMessage(), ioe);
-            }
-        }
+    /**
+     * Returns the File to which the VersionManifest for this project will be saved.
+     */
+    public File getVersionManifestFile() {
+        return new File(distDir, "version_manifest.json");
     }
 
+    /**
+     * Sets the VersionManifest for this Project.
+     */
     public void setVersionManifest(VersionManifest manifest) {
         this.versionManifest = manifest;
-        File manifestFile = new File(distDir, "version_manifest.json");
-        if (versionManifest == null) {
-            if (manifestFile.exists()) {
-                manifestFile.delete();
-            }
-            return;
+    }
+
+    /**
+     * Generates json for the UpdateSources and VersionManifest for this Project and
+     * saves them to the appropriate locations. Also saves the current public and private
+     * key pair, if they are set.
+     */
+    public void save() throws IOException {
+        if (privateKey != null) {
+            SignatureUtil.savePrivateKey(privateKey, getPrivateKeyFile());
         }
-        try {
-            FileSystemUtil.writeStringToFile(gson.toJson(versionManifest), manifestFile);
+        if (publicKey != null) {
+            SignatureUtil.savePublicKey(publicKey, getPublicKeyFile());
         }
-        catch (IOException ioe) {
-            log.log(Level.SEVERE, "Problem writing version_manifest.json: " + ioe.getMessage(), ioe);
+        if (updateSources != null) {
+            FileSystemUtil.writeStringToFile(gson.toJson(updateSources), getUpdateSourcesFile());
+        }
+        if (versionManifest != null) {
+            FileSystemUtil.writeStringToFile(gson.toJson(versionManifest), getVersionManifestFile());
         }
     }
 
+    /**
+     * Creates a new, empty Project in the given project directory and with the given name.
+     * A properties file will be created for the project, and the distribution directory
+     * will be created automatically if it does not already exist.
+     */
     public static Project createNew(String name, File projectDir) throws IOException {
         File distDir = new File(projectDir, "dist");
         if (!distDir.exists()) {
@@ -178,6 +218,10 @@ public class Project {
         return new Project(name, props);
     }
 
+    /**
+     * Attempts to load an ext-packager Project from the given project file.
+     * If any required files are missing, an IOException is thrown.
+     */
     public static Project fromFile(File projectFile) throws IOException {
         File projectDir = projectFile.getParentFile();
         File distDir = new File(projectDir, "dist");
@@ -220,19 +264,42 @@ public class Project {
         return project;
     }
 
-    public String getName() {
-        return name;
+    /**
+     * Invoked internally to load the UpdateSources list for this Project.
+     */
+    private void loadUpdateSources() {
+        // Start by blanking out our current UpdateSources in case the load fails:
+        updateSources = new UpdateSources(name);
+
+        // Now try to load from disk:
+        File updateSourcesFile = getUpdateSourcesFile();
+        if (updateSourcesFile.exists()) {
+            try {
+                updateSources = gson.fromJson(FileSystemUtil.readFileToString(updateSourcesFile), UpdateSources.class);
+            }
+            catch (IOException ioe) {
+                log.log(Level.SEVERE, "Problem reading update_sources.json: " + ioe.getMessage(), ioe);
+            }
+        }
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    /**
+     * Invoked internally to load the version manifest for this Project.
+     */
+    private void loadVersionManifest() {
+        // Start by blanking out our current VersionManifest in case the load fails:
+        versionManifest = new VersionManifest();
+        versionManifest.setApplicationName(name);
 
-    public File getProjectDir() {
-        return projectDir;
-    }
-
-    public File getDistDir() {
-        return distDir;
+        // Now try to load from disk:
+        File manifestFile = getVersionManifestFile();
+        if (manifestFile.exists()) {
+            try {
+                versionManifest = gson.fromJson(FileSystemUtil.readFileToString(manifestFile), VersionManifest.class);
+            }
+            catch (IOException ioe) {
+                log.log(Level.SEVERE, "Problem reading version_manifest.json: " + ioe.getMessage(), ioe);
+            }
+        }
     }
 }

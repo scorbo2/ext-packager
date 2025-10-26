@@ -1,6 +1,7 @@
 package ca.corbett.packager.ui;
 
 import ca.corbett.extras.LookAndFeelManager;
+import ca.corbett.extras.MessageUtil;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
@@ -10,6 +11,7 @@ import ca.corbett.forms.fields.PanelField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
+import ca.corbett.packager.project.ProjectManager;
 import ca.corbett.packager.ui.dialogs.ApplicationVersionDialog;
 import ca.corbett.updates.VersionManifest;
 
@@ -28,7 +30,9 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * This card allows viewing and editing of the VersionManifest for the current Project.
@@ -40,6 +44,8 @@ import java.util.List;
  */
 public class VersionManifestCard extends JPanel implements ProjectListener {
 
+    private static final Logger log = Logger.getLogger(VersionManifestCard.class.getName());
+    private MessageUtil messageUtil;
     private final FormPanel formPanel;
     private final ShortTextField appNameField;
     private final ListField<VersionManifest.ApplicationVersion> appVersionListField;
@@ -51,7 +57,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         formPanel.add(LabelField.createBoldHeaderLabel("Version manifest", 20));
 
         appNameField = new ShortTextField("Application name:", 15);
-        appNameField.addValueChangedListener(field -> generateVersionManifestJson());
+        appNameField.addValueChangedListener(field -> saveChanges());
         appNameField.setAllowBlank(false);
         formPanel.add(appNameField);
 
@@ -94,7 +100,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         formPanel.add(buttonPanel);
 
         add(formPanel, BorderLayout.CENTER);
-        ProjectCard.getInstance().addProjectListener(this);
+        ProjectManager.getInstance().addProjectListener(this);
     }
 
     /**
@@ -143,7 +149,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     private void addApplicationVersion(VersionManifest.ApplicationVersion version) {
         DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
         listModel.addElement(version);
-        generateVersionManifestJson();
+        saveChanges();
     }
 
     /**
@@ -166,7 +172,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
         listModel.insertElementAt(dialog.getApplicationVersion(), selectedIndexes[0]); // insert new element
         listModel.removeElementAt(selectedIndexes[0] + 1); // remove old element which got bumped by one
-        generateVersionManifestJson();
+        saveChanges();
     }
 
     /**
@@ -180,10 +186,13 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
         DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
         listModel.removeElementAt(selectedIndexes[0]);
-        generateVersionManifestJson();
+        saveChanges();
     }
 
-    private void generateVersionManifestJson() {
+    /**
+     * Invoked internally to commit changes to the version manifest.
+     */
+    private void saveChanges() {
         if (!formPanel.isFormValid()) {
             return;
         }
@@ -196,15 +205,20 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
         //manifest.setManifestGenerated(); // TODO do we set this each time? or once on upload?
 
-        ProjectCard.getInstance().getProject().setVersionManifest(manifest);
+        ProjectManager.getInstance().getProject().setVersionManifest(manifest);
+        ProjectManager.getInstance().removeProjectListener(this);
+        try {
+            ProjectManager.getInstance().save();
+        }
+        catch (IOException ioe) {
+            getMessageUtil().error("Error saving version manifest: " + ioe.getMessage(), ioe);
+        }
+        finally {
+            ProjectManager.getInstance().addProjectListener(this);
+        }
     }
 
-    /**
-     * We listen for project events so that when a project is loaded, we can parse out the
-     * version manifest from it and display it here.
-     */
-    @Override
-    public void projectLoaded(Project project) {
+    private void populateFields(Project project) {
         // Dumb initial value in case the proper application name is not set:
         if (project == null || project.getVersionManifest() == null) {
             appNameField.setText("");
@@ -214,12 +228,28 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             return;
         }
 
+        DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
+        listModel.clear();
         for (VersionManifest.ApplicationVersion version : project.getVersionManifest().getApplicationVersions()) {
             addApplicationVersion(version);
         }
 
         // Now we can set a more intelligent default value for application name:
         appNameField.setText(project.getVersionManifest().getApplicationName());
+    }
+
+    /**
+     * We listen for project events so that when a project is loaded, we can parse out the
+     * version manifest from it and display it here.
+     */
+    @Override
+    public void projectLoaded(Project project) {
+        populateFields(project);
+    }
+
+    @Override
+    public void projectSaved(Project project) {
+        populateFields(project);
     }
 
     /**
@@ -242,5 +272,12 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             setBackground(isSelected ? selectedBg : normalBg);
             return this;
         }
+    }
+
+    private MessageUtil getMessageUtil() {
+        if (messageUtil == null) {
+            messageUtil = new MessageUtil(MainWindow.getInstance(), log);
+        }
+        return messageUtil;
     }
 }

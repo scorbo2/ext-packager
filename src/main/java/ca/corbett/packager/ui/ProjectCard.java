@@ -9,8 +9,11 @@ import ca.corbett.forms.fields.PanelField;
 import ca.corbett.packager.AppConfig;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
+import ca.corbett.packager.project.ProjectManager;
 import ca.corbett.packager.ui.dialogs.NewProjectDialog;
+import ca.corbett.packager.ui.dialogs.PopupTextDialog;
 
+import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JPanel;
@@ -18,40 +21,27 @@ import javax.swing.filechooser.FileFilter;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Logger;
 
 /**
  * This card allows creation or loading of an ext-packager project.
- * This card is singleton, and allows adding of ProjectListeners, so that
- * callers know when a new project is added. This card also maintains
- * a handle on the currently loaded Project, if any.
- * <pre>
- * // Get a handle on the current Project from anywhere:
- * Project project = ProjectCard.getInstance().getProject();
- * if (project != null) {
- *     // read it, update it, etc
- * }
- * </pre>
  *
  * @author <a href="https://github.com/scorbo2">scorbo2</a>
  */
-public class ProjectCard extends JPanel {
+public class ProjectCard extends JPanel implements ProjectListener {
 
     private final Logger log = Logger.getLogger(ProjectCard.class.getName());
     private MessageUtil messageUtil;
 
-    private static ProjectCard instance;
-    private final List<ProjectListener> projectListeners = new ArrayList<>();
-    private Project project = null;
-
     private final LabelField projectNameField;
     private final LabelField projectDirField;
+    private final LabelField updateSourcesField;
+    private final LabelField versionManifestField;
 
-    private ProjectCard() {
+    public ProjectCard() {
         setLayout(new BorderLayout());
         FormPanel formPanel = new FormPanel(Alignment.TOP_LEFT);
         formPanel.setBorderMargin(new Margins(12));
@@ -62,6 +52,12 @@ public class ProjectCard extends JPanel {
 
         projectDirField = new LabelField("Project directory:", "N/A");
         formPanel.add(projectDirField);
+
+        updateSourcesField = new LabelField("Update sources:", "N/A");
+        formPanel.add(updateSourcesField);
+
+        versionManifestField = new LabelField("Version manifest", "N/A");
+        formPanel.add(versionManifestField);
 
         PanelField buttonPanel = new PanelField(new FlowLayout(FlowLayout.LEFT));
         JButton btn = new JButton("Open");
@@ -76,71 +72,23 @@ public class ProjectCard extends JPanel {
         formPanel.add(buttonPanel);
 
         add(formPanel, BorderLayout.CENTER);
-    }
 
-    public static ProjectCard getInstance() {
-        if (instance == null) {
-            instance = new ProjectCard();
-        }
-        return instance;
-    }
-
-    /**
-     * Returns the currently loaded Project, or null if no selection has been made yet.
-     */
-    public Project getProject() {
-        return project;
-    }
-
-    /**
-     * Registers to receive project notifications from this card. Most notably, you
-     * can find out when a Project has been created/loaded. Other cards use this to
-     * populate their fields based on whatever Project we're dealing with.
-     */
-    public void addProjectListener(ProjectListener listener) {
-        projectListeners.add(listener);
-    }
-
-    public void removeProjectListener(ProjectListener listener) {
-        projectListeners.remove(listener);
-    }
-
-    private void setProject(Project project) {
-        projectNameField.setText(project.getName());
-        projectDirField.setText(project.getProjectDir().getAbsolutePath());
-        this.project = project;
-        for (ProjectListener listener : projectListeners) {
-            listener.projectLoaded(project);
-        }
+        ProjectManager.getInstance().addProjectListener(this);
     }
 
     /**
      * Invoked internally to show a file chooser for opening an existing project from disk.
      */
     private void showBrowseProjectDialog() {
-        JFileChooser fileChooser = new JFileChooser(AppConfig.getInstance().getProjectBaseDir());
-        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setFileFilter(new FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                return f.isDirectory() || f.getName().endsWith(".extpkg");
-            }
-
-            @Override
-            public String getDescription() {
-                return "ExtPackager project files (*.extpkg)";
-            }
-        });
+        JFileChooser fileChooser = createProjectFileChooser();
         if (fileChooser.showOpenDialog(MainWindow.getInstance()) == JFileChooser.APPROVE_OPTION) {
             try {
-                File projectFile = fileChooser.getSelectedFile();
-                Project project = Project.fromFile(projectFile);
-                MainWindow.getInstance().projectOpened();
-                setProject(project);
+                File selectedFile = fileChooser.getSelectedFile();
+                ProjectManager.getInstance().loadProject(selectedFile);
+                populateFields(ProjectManager.getInstance().getProject());
 
                 // Remember this file browse location for next time:
-                AppConfig.getInstance().setProjectBaseDir(projectFile.getParentFile().getParentFile());
+                AppConfig.getInstance().setProjectBaseDir(selectedFile);
                 AppConfig.getInstance().save();
             }
             catch (IOException ioe) {
@@ -157,13 +105,12 @@ public class ProjectCard extends JPanel {
         dialog.setVisible(true);
         if (dialog.wasOkayed()) {
             try {
-                Project project = Project.createNew(dialog.getProjectName(), dialog.getProjectDir());
-                MainWindow.getInstance().projectOpened();
-                setProject(project);
+                ProjectManager.getInstance().newProject(dialog.getProjectName(), dialog.getProjectDir());
+                populateFields(ProjectManager.getInstance().getProject());
 
+                // Save this project base dir for next time:
                 AppConfig.getInstance().setProjectBaseDir(dialog.getProjectDir().getParentFile());
                 AppConfig.getInstance().save();
-
             }
             catch (IOException ioe) {
                 getMessageUtil().error("Error creating project file: " + ioe.getMessage(), ioe);
@@ -172,10 +119,68 @@ public class ProjectCard extends JPanel {
         }
     }
 
+    private void populateFields(Project project) {
+        projectNameField.setText(project.getName());
+        projectDirField.setText(project.getProjectDir().getAbsolutePath());
+        updateSourcesField.setText("update_sources.json");
+        updateSourcesField.setHyperlink(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new PopupTextDialog(MainWindow.getInstance(),
+                                    "update_sources.json",
+                                    ProjectManager.getInstance().getUpdateSourcesAsString(),
+                                    false)
+                        .setVisible(true);
+            }
+        });
+        versionManifestField.setText("dist/version_manifest.json");
+        versionManifestField.setHyperlink(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new PopupTextDialog(MainWindow.getInstance(),
+                                    "dist/version_manifest.json",
+                                    ProjectManager.getInstance().getVersionManifestAsString(),
+                                    false)
+                        .setVisible(true);
+            }
+        });
+    }
+
+    /**
+     * Creates and returns a JFileChooser suitable for choosing ext-packager project files.
+     */
+    private static JFileChooser createProjectFileChooser() {
+        JFileChooser fileChooser = new JFileChooser(AppConfig.getInstance().getProjectBaseDir());
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooser.setMultiSelectionEnabled(false);
+        fileChooser.setFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || f.getName().endsWith(".extpkg");
+            }
+
+            @Override
+            public String getDescription() {
+                return "ExtPackager project files (*.extpkg)";
+            }
+        });
+        return fileChooser;
+    }
+
     private MessageUtil getMessageUtil() {
         if (messageUtil == null) {
             messageUtil = new MessageUtil(MainWindow.getInstance(), log);
         }
         return messageUtil;
+    }
+
+    @Override
+    public void projectLoaded(Project project) {
+        populateFields(project);
+    }
+
+    @Override
+    public void projectSaved(Project project) {
+        populateFields(project);
     }
 }

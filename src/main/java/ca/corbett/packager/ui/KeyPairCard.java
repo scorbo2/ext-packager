@@ -2,7 +2,6 @@ package ca.corbett.packager.ui;
 
 import ca.corbett.extras.MessageUtil;
 import ca.corbett.extras.crypt.SignatureUtil;
-import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
@@ -10,6 +9,7 @@ import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.PanelField;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
+import ca.corbett.packager.project.ProjectManager;
 import ca.corbett.packager.ui.dialogs.PopupTextDialog;
 
 import javax.swing.AbstractAction;
@@ -20,8 +20,6 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
-import java.io.File;
-import java.io.IOException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -64,7 +62,7 @@ public class KeyPairCard extends JPanel implements ProjectListener {
 
         add(formPanel, BorderLayout.CENTER);
 
-        ProjectCard.getInstance().addProjectListener(this);
+        ProjectManager.getInstance().addProjectListener(this);
     }
 
     /**
@@ -72,7 +70,7 @@ public class KeyPairCard extends JPanel implements ProjectListener {
      * If a key pair already exists, the user is prompted for confirmation to replace it.
      */
     private void generateKeyPair() {
-        Project currentProject = ProjectCard.getInstance().getProject();
+        Project currentProject = ProjectManager.getInstance().getProject();
         if (currentProject.getPublicKey() != null || currentProject.getPrivateKey() != null) {
             if (JOptionPane.showConfirmDialog(MainWindow.getInstance(),
                                               "WARNING!\nThis project already has a key pair defined.\n"
@@ -85,52 +83,32 @@ public class KeyPairCard extends JPanel implements ProjectListener {
             }
         }
 
+        ProjectManager.getInstance().removeProjectListener(this);
         try {
             KeyPair keyPair = SignatureUtil.generateKeyPair();
-            ProjectCard.getInstance().getProject().setPublicKey(keyPair.getPublic());
-            ProjectCard.getInstance().getProject().setPrivateKey(keyPair.getPrivate());
-            projectLoaded(ProjectCard.getInstance().getProject());
+            ProjectManager.getInstance().getProject().setKeyPair(keyPair);
+            ProjectManager.getInstance().save();
         }
         catch (Exception e) {
             getMessageUtil().error("Unable to generate key pair!: " + e.getMessage(), e);
         }
-    }
-
-    /**
-     * Invoked internally to show the contents of the given text-based file.
-     * No checking is done here to ensure the given file only contains text,
-     * or to ensure that it is reasonably small enough to load and show like this!
-     */
-    private void showTextFromFile(String label, File file) {
-        try {
-            PopupTextDialog dialog = new PopupTextDialog(MainWindow.getInstance(),
-                                                         label,
-                                                         FileSystemUtil.readFileToString(file),
-                                                         false);
-            dialog.setSize(new Dimension(600, 400));
-            dialog.setLocationRelativeTo(MainWindow.getInstance());
-            dialog.setVisible(true);
-        }
-        catch (IOException ioe) {
-            getMessageUtil().error("Unable to read key file: " + ioe.getMessage(), ioe);
+        finally {
+            ProjectManager.getInstance().addProjectListener(this);
         }
     }
 
-    /**
-     * We listen for changes to the currently selected Project - when a project is created
-     * or opened, this method is invoked, and we use it to populate our public and private
-     * key fields.
-     */
-    @Override
-    public void projectLoaded(Project project) {
+    private void populateFields(Project project) {
         PublicKey publicKey = project == null ? null : project.getPublicKey();
         if (publicKey != null) {
-            publicKeyLabel.setText("public.key");
+            publicKeyLabel.setText("dist/public.key");
             publicKeyLabel.setHyperlink(new AbstractAction() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    showTextFromFile("Public key:",
-                                     new File(ProjectCard.getInstance().getProject().getDistDir(), "public.key"));
+                    new PopupTextDialog(MainWindow.getInstance(),
+                                        "dist/public.key",
+                                        ProjectManager.getInstance().getPublicKeyAsString(),
+                                        false)
+                            .setVisible(true);
                 }
             });
         }
@@ -145,8 +123,11 @@ public class KeyPairCard extends JPanel implements ProjectListener {
             privateKeyLabel.setHyperlink(new AbstractAction() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    showTextFromFile("Private key:",
-                                     new File(ProjectCard.getInstance().getProject().getProjectDir(), "private.key"));
+                    new PopupTextDialog(MainWindow.getInstance(),
+                                        "private.key",
+                                        ProjectManager.getInstance().getPrivateKeyAsString(),
+                                        false)
+                            .setVisible(true);
                 }
             });
         }
@@ -154,6 +135,21 @@ public class KeyPairCard extends JPanel implements ProjectListener {
             privateKeyLabel.setText("N/A");
             privateKeyLabel.clearHyperlink();
         }
+    }
+
+    /**
+     * We listen for changes to the currently selected Project - when a project is created
+     * or opened, this method is invoked, and we use it to populate our public and private
+     * key fields.
+     */
+    @Override
+    public void projectLoaded(Project project) {
+        populateFields(project);
+    }
+
+    @Override
+    public void projectSaved(Project project) {
+        populateFields(project);
     }
 
     private MessageUtil getMessageUtil() {

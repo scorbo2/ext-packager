@@ -1,6 +1,7 @@
 package ca.corbett.packager.ui;
 
 import ca.corbett.extras.LookAndFeelManager;
+import ca.corbett.extras.MessageUtil;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
@@ -13,6 +14,7 @@ import ca.corbett.forms.validators.FieldValidator;
 import ca.corbett.forms.validators.ValidationResult;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
+import ca.corbett.packager.project.ProjectManager;
 import ca.corbett.packager.ui.dialogs.UpdateSourceDialog;
 import ca.corbett.updates.UpdateSources;
 
@@ -31,7 +33,9 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * This card allows viewing and editing of the update sources for the current project.
@@ -42,6 +46,8 @@ import java.util.List;
  */
 public class UpdateSourcesCard extends JPanel implements ProjectListener {
 
+    private static final Logger log = Logger.getLogger(UpdateSourcesCard.class.getName());
+    private MessageUtil messageUtil;
     private final FormPanel formPanel;
     private final ShortTextField appNameField;
     private final ListField<UpdateSources.UpdateSource> sourcesListField;
@@ -53,7 +59,7 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         formPanel.add(LabelField.createBoldHeaderLabel("Update sources", 20));
 
         appNameField = new ShortTextField("Application name:", 15);
-        appNameField.addValueChangedListener(field -> generateSourcesJson());
+        appNameField.addValueChangedListener(field -> saveChanges());
         appNameField.setAllowBlank(false);
         formPanel.add(appNameField);
 
@@ -99,7 +105,7 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
 
         add(formPanel, BorderLayout.CENTER);
 
-        ProjectCard.getInstance().addProjectListener(this);
+        ProjectManager.getInstance().addProjectListener(this);
     }
 
     /**
@@ -114,7 +120,7 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         UpdateSources.UpdateSource updateSource = dialog.getUpdateSource();
         DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
         listModel.addElement(updateSource);
-        generateSourcesJson();
+        saveChanges();
     }
 
     /**
@@ -137,7 +143,7 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
         listModel.insertElementAt(dialog.getUpdateSource(), selectedIndexes[0]); // insert new element
         listModel.removeElementAt(selectedIndexes[0] + 1); // remove old element which got bumped by one
-        generateSourcesJson();
+        saveChanges();
     }
 
     /**
@@ -151,13 +157,13 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         }
         DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
         listModel.removeElementAt(selectedIndexes[0]);
-        generateSourcesJson();
+        saveChanges();
     }
 
     /**
-     * Invoked internally to generate the source json for the current list of update sources.
+     * Invoked internally to commit changes to our update sources list.
      */
-    private void generateSourcesJson() {
+    private void saveChanges() {
         if (!formPanel.isFormValid()) {
             return;
         }
@@ -166,15 +172,20 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         for (int i = 0; i < listModel.size(); i++) {
             updateSources.addUpdateSource(listModel.getElementAt(i));
         }
-        ProjectCard.getInstance().getProject().setUpdateSources(updateSources);
+        ProjectManager.getInstance().getProject().setUpdateSources(updateSources);
+        ProjectManager.getInstance().removeProjectListener(this);
+        try {
+            ProjectManager.getInstance().save();
+        }
+        catch (IOException ioe) {
+            getMessageUtil().error("Error saving update sources: " + ioe.getMessage(), ioe);
+        }
+        finally {
+            ProjectManager.getInstance().addProjectListener(this);
+        }
     }
 
-    /**
-     * We listen for Project events, so that we can load our update sources list from a Project
-     * when one is opened.
-     */
-    @Override
-    public void projectLoaded(Project project) {
+    private void populateFields(Project project) {
         // Dumb initial value in case the proper application name is not set:
         if (project == null || project.getUpdateSources() == null) {
             appNameField.setText("");
@@ -193,6 +204,20 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
 
         // Now we can set a more intelligent default value for application name:
         appNameField.setText(project.getUpdateSources().getApplicationName());
+    }
+
+    /**
+     * We listen for Project events, so that we can load our update sources list from a Project
+     * when one is opened.
+     */
+    @Override
+    public void projectLoaded(Project project) {
+        populateFields(project);
+    }
+
+    @Override
+    public void projectSaved(Project project) {
+        populateFields(project);
     }
 
     /**
@@ -219,5 +244,12 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
             setBackground(isSelected ? selectedBg : normalBg);
             return this;
         }
+    }
+
+    private MessageUtil getMessageUtil() {
+        if (messageUtil == null) {
+            messageUtil = new MessageUtil(MainWindow.getInstance(), log);
+        }
+        return messageUtil;
     }
 }
