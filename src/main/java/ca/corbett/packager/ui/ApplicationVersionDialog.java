@@ -3,7 +3,10 @@ package ca.corbett.packager.ui;
 import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
+import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ShortTextField;
+import ca.corbett.forms.validators.FieldValidator;
+import ca.corbett.forms.validators.ValidationResult;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.BorderFactory;
@@ -18,10 +21,14 @@ public class ApplicationVersionDialog extends JDialog {
 
     private boolean wasOkayed;
     private FormPanel formPanel;
+    private LabelField appNameField;
     private ShortTextField versionField;
+    private UniquenessChecker uniquenessChecker;
+    private final String applicationName;
 
-    public ApplicationVersionDialog(String title) {
+    public ApplicationVersionDialog(String title, String appName) {
         super(MainWindow.getInstance(), title, true);
+        this.applicationName = appName;
         setSize(new Dimension(550, 480));
         setResizable(false);
         setLocationRelativeTo(MainWindow.getInstance());
@@ -34,6 +41,10 @@ public class ApplicationVersionDialog extends JDialog {
         return wasOkayed;
     }
 
+    public void setUniquenessChecker(UniquenessChecker uniquenessChecker) {
+        this.uniquenessChecker = uniquenessChecker;
+    }
+
     public void setApplicationVersion(VersionManifest.ApplicationVersion appVersion) {
         versionField.setText(appVersion.getVersion());
     }
@@ -44,7 +55,7 @@ public class ApplicationVersionDialog extends JDialog {
         }
 
         VersionManifest.ApplicationVersion appVersion = new VersionManifest.ApplicationVersion();
-        appVersion.setVersion(versionField.getText()); // TODO uniqueness check...
+        appVersion.setVersion(versionField.getText());
         // TODO populate extensions and extension versions and screenshots, oh my
         return appVersion;
     }
@@ -53,8 +64,22 @@ public class ApplicationVersionDialog extends JDialog {
         formPanel = new FormPanel(Alignment.TOP_LEFT);
         formPanel.setBorderMargin(16);
 
+        appNameField = new LabelField("Application name:", applicationName);
+        formPanel.add(appNameField);
+
         versionField = new ShortTextField("Application version:", 10);
         versionField.setAllowBlank(false);
+        versionField.addFieldValidator(new FieldValidator<ShortTextField>() {
+            @Override
+            public ValidationResult validate(ShortTextField fieldToValidate) {
+                if (uniquenessChecker == null) {
+                    return ValidationResult.valid();
+                }
+                return uniquenessChecker.isVersionUnique(fieldToValidate.getText())
+                        ? ValidationResult.valid()
+                        : ValidationResult.invalid("This version number exists already.");
+            }
+        });
         formPanel.add(versionField);
 
         return formPanel;
@@ -83,5 +108,9 @@ public class ApplicationVersionDialog extends JDialog {
         panel.add(button);
 
         return panel;
+    }
+
+    public interface UniquenessChecker {
+        boolean isVersionUnique(String version);
     }
 }

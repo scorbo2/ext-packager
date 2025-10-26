@@ -18,7 +18,8 @@ import java.util.logging.Logger;
 /**
  * Represents all the settings for a saved project in the ExtPackager application.
  * A Project here in this application maps 1:1 to an application that you want to distribute.
- * So, a good convention is to name the project after the application in question.
+ * So, a good convention is to name the project after the application in question,
+ * but this is not enforced.
  *
  * @author <a href="https://github.com/scorbo2">scorbo2</a>
  */
@@ -38,6 +39,10 @@ public class Project {
     private VersionManifest versionManifest;
 
     private final Gson gson;
+
+    private Project(String name, FileBasedProperties props) {
+        this(name, props, null, null);
+    }
 
     private Project(String name, FileBasedProperties props, PublicKey publicKey, PrivateKey privateKey) {
         this.name = name;
@@ -170,7 +175,7 @@ public class Project {
         FileBasedProperties props = new FileBasedProperties(new File(projectDir, name + ".extpkg"));
         props.setString("projectName", name);
         props.save();
-        return new Project(name, props, null, null);
+        return new Project(name, props);
     }
 
     public static Project fromFile(File projectFile) throws IOException {

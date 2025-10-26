@@ -62,7 +62,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
 
         PanelField buttonPanel = new PanelField(new FlowLayout(FlowLayout.LEFT));
         JButton button = new JButton("Add");
-        button.addActionListener(e -> addApplicationVersion());
+        button.addActionListener(e -> createApplicationVersion());
         button.setPreferredSize(new Dimension(90, 24));
         buttonPanel.getPanel().add(button);
 
@@ -82,15 +82,32 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         ProjectCard.getInstance().addProjectListener(this);
     }
 
-    private void addApplicationVersion() {
-        ApplicationVersionDialog dialog = new ApplicationVersionDialog("Add application version");
+    private void createApplicationVersion() {
+        ApplicationVersionDialog dialog = new ApplicationVersionDialog("Add application version",
+                                                                       appNameField.getText());
+        dialog.setUniquenessChecker(new ApplicationVersionDialog.UniquenessChecker() {
+            @Override
+            public boolean isVersionUnique(String version) {
+                DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
+                for (int i = 0; i < listModel.size(); i++) {
+                    if (listModel.getElementAt(i).getVersion().equals(version)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        });
         dialog.setVisible(true);
         if (!dialog.wasOkayed()) {
             return;
         }
-        VersionManifest.ApplicationVersion appVersion = dialog.getApplicationVersion();
+
+        addApplicationVersion(dialog.getApplicationVersion());
+    }
+
+    private void addApplicationVersion(VersionManifest.ApplicationVersion version) {
         DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
-        listModel.addElement(appVersion);
+        listModel.addElement(version);
         generateVersionManifestJson();
     }
 
@@ -100,7 +117,8 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             JOptionPane.showMessageDialog(MainWindow.getInstance(), "Nothing selected.");
             return;
         }
-        ApplicationVersionDialog dialog = new ApplicationVersionDialog("Edit application version");
+        ApplicationVersionDialog dialog = new ApplicationVersionDialog("Edit application version",
+                                                                       appNameField.getText());
         dialog.setApplicationVersion(appVersionListField.getList().getSelectedValue());
         dialog.setVisible(true);
         if (!dialog.wasOkayed()) {
@@ -137,26 +155,26 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
         //manifest.setManifestGenerated(); // TODO do we set this each time? or once on upload?
 
-        // TODO extensions, ext versions, screenshots
-
         ProjectCard.getInstance().getProject().setVersionManifest(manifest);
     }
 
     @Override
     public void projectLoaded(Project project) {
         // Dumb initial value in case the proper application name is not set:
-        if (project == null || project.getUpdateSources() == null) {
+        if (project == null || project.getVersionManifest() == null) {
             appNameField.setText("");
         }
 
-        if (project == null || project.getUpdateSources() == null) {
+        if (project == null || project.getVersionManifest() == null) {
             return;
         }
 
-        // TODO load version manifest settings from project
+        for (VersionManifest.ApplicationVersion version : project.getVersionManifest().getApplicationVersions()) {
+            addApplicationVersion(version);
+        }
 
         // Now we can set a more intelligent default value for application name:
-        appNameField.setText(project.getUpdateSources().getApplicationName());
+        appNameField.setText(project.getVersionManifest().getApplicationName());
     }
 
     private static class AppVersionListCellRenderer extends JLabel
