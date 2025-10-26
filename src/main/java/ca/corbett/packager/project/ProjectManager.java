@@ -4,6 +4,7 @@ import ca.corbett.extras.CoalescingDocumentListener;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.packager.ui.MainWindow;
 
+import javax.swing.Timer;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,14 +77,10 @@ public class ProjectManager {
             fireProjectSavedEvent(project);
         }
         finally {
-            // Extremely cheesy, but we have to wait for coalescing doc listeners to finish responding.
-            new Thread(() -> {
-                try {
-                    Thread.sleep(CoalescingDocumentListener.DELAY_MS * 2); // cheesy!
-                    isSaveInProgress = false;
-                }
-                catch (Exception ignored) { }
-            }).start();
+            // Extremely cheesy, but we have to wait for coalescing doc listeners to finish responding to the save.
+            Timer timer = new Timer(CoalescingDocumentListener.DELAY_MS * 2, e -> isSaveInProgress = false);
+            timer.setRepeats(false);
+            timer.start();
         }
     }
 
