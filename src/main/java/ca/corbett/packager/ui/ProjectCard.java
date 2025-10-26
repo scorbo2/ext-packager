@@ -122,28 +122,26 @@ public class ProjectCard extends JPanel implements ProjectListener {
     private void populateFields(Project project) {
         projectNameField.setText(project.getName());
         projectDirField.setText(project.getProjectDir().getAbsolutePath());
-        updateSourcesField.setText("update_sources.json");
-        updateSourcesField.setHyperlink(new AbstractAction() {
+        String filename = "update_sources.json";
+        updateSourcesField.setText(filename);
+        updateSourcesField.setHyperlink(createHyperlinkAction(filename,
+                                                              ProjectManager.getInstance().getUpdateSourcesAsString()));
+
+        filename = "dist/version_manifest.json";
+        versionManifestField.setText(filename);
+        versionManifestField.setHyperlink(createHyperlinkAction(filename,
+                                                                ProjectManager.getInstance()
+                                                                              .getVersionManifestAsString()));
+    }
+
+    private static AbstractAction createHyperlinkAction(String title, String contents) {
+        return new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new PopupTextDialog(MainWindow.getInstance(),
-                                    "update_sources.json",
-                                    ProjectManager.getInstance().getUpdateSourcesAsString(),
-                                    false)
+                new PopupTextDialog(MainWindow.getInstance(), title, contents, false)
                         .setVisible(true);
             }
-        });
-        versionManifestField.setText("dist/version_manifest.json");
-        versionManifestField.setHyperlink(new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                new PopupTextDialog(MainWindow.getInstance(),
-                                    "dist/version_manifest.json",
-                                    ProjectManager.getInstance().getVersionManifestAsString(),
-                                    false)
-                        .setVisible(true);
-            }
-        });
+        };
     }
 
     /**
