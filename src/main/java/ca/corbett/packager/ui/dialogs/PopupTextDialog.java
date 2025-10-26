@@ -1,4 +1,4 @@
-package ca.corbett.packager.ui;
+package ca.corbett.packager.ui.dialogs;
 
 import ca.corbett.forms.fields.LabelField;
 

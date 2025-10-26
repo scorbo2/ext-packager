@@ -1,4 +1,4 @@
-package ca.corbett.packager.ui;
+package ca.corbett.packager.ui.dialogs;
 
 import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.forms.Alignment;
@@ -7,6 +7,7 @@ import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.forms.validators.FieldValidator;
 import ca.corbett.forms.validators.ValidationResult;
+import ca.corbett.packager.ui.MainWindow;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.BorderFactory;

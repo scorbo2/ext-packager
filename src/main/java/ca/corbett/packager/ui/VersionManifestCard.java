@@ -10,6 +10,7 @@ import ca.corbett.forms.fields.PanelField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
+import ca.corbett.packager.ui.dialogs.ApplicationVersionDialog;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.DefaultListModel;
@@ -63,17 +64,23 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         PanelField buttonPanel = new PanelField(new FlowLayout(FlowLayout.LEFT));
         JButton button = new JButton("Add");
         button.addActionListener(e -> createApplicationVersion());
-        button.setPreferredSize(new Dimension(90, 24));
+        button.setPreferredSize(new Dimension(70, 24));
         buttonPanel.getPanel().add(button);
 
         button = new JButton("Edit");
         button.addActionListener(e -> editApplicationVersion());
-        button.setPreferredSize(new Dimension(90, 24));
+        button.setPreferredSize(new Dimension(70, 24));
         buttonPanel.getPanel().add(button);
 
         button = new JButton("Delete");
         button.addActionListener(e -> deleteApplicationVersion());
-        button.setPreferredSize(new Dimension(90, 24));
+        button.setPreferredSize(new Dimension(70, 24));
+        buttonPanel.getPanel().add(button);
+        buttonPanel.getMargins().setLeft(128);
+
+        button = new JButton("Import");
+        button.addActionListener(e -> importExtensions());
+        button.setPreferredSize(new Dimension(70, 24));
         buttonPanel.getPanel().add(button);
         buttonPanel.getMargins().setLeft(128);
         formPanel.add(buttonPanel);
@@ -103,6 +110,20 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
 
         addApplicationVersion(dialog.getApplicationVersion());
+    }
+
+    private void importExtensions() {
+        // TODO pop a file/directory chooser
+        // If a directory is chosen, scan it recursively for all jar files
+        // otherwise, allow individual jar file(s) to be chosen
+        // either way, extract the extInfo.json out of each one
+        // if its targetApplicationVersion already exists, add this extension to that version
+        // otherwise, implicitly create an ApplicationVersion, add it to the list, and add this extension to it
+        // Sort the ApplicationVersion list after we're done?
+        //
+        // NOTE: the extension(s) we find may already exist!
+        //       Overwrite if different from what we have, or leave it alone if it matches
+        //       This allows a batch import to safely add any new or changed extensions without duplicating existing ones
     }
 
     private void addApplicationVersion(VersionManifest.ApplicationVersion version) {

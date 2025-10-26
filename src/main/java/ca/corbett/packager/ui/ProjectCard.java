@@ -9,6 +9,7 @@ import ca.corbett.forms.fields.PanelField;
 import ca.corbett.packager.AppConfig;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
+import ca.corbett.packager.ui.dialogs.NewProjectDialog;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;

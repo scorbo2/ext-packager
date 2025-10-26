@@ -13,6 +13,7 @@ import ca.corbett.forms.validators.FieldValidator;
 import ca.corbett.forms.validators.ValidationResult;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
+import ca.corbett.packager.ui.dialogs.UpdateSourceDialog;
 import ca.corbett.updates.UpdateSources;
 
 import javax.swing.DefaultListModel;

@@ -1,4 +1,4 @@
-package ca.corbett.packager.ui;
+package ca.corbett.packager.ui.dialogs;
 
 import ca.corbett.extras.MessageUtil;
 import ca.corbett.extras.properties.PropertiesDialog;
@@ -8,6 +8,7 @@ import ca.corbett.forms.fields.FileField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.packager.AppConfig;
+import ca.corbett.packager.ui.MainWindow;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;

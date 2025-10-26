@@ -10,6 +10,7 @@ import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.PanelField;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
+import ca.corbett.packager.ui.dialogs.PopupTextDialog;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
