@@ -7,3 +7,4 @@ Version 1.0 [TODO] - Initial release
   #3 - Version manifest generation
   #7 - Project creation and selection
   #9 - Keypair regeneration should warn if exists
+  #16 - Add hyperlinks to generated json on project card

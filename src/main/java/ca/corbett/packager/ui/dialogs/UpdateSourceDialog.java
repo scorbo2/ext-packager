@@ -33,10 +33,11 @@ public class UpdateSourceDialog extends JDialog {
     private ShortTextField baseUrlField;
     private LabelField manifestField;
     private LabelField publicKeyField;
+    private LabelField extensionsDirField;
 
     public UpdateSourceDialog(String title) {
         super(MainWindow.getInstance(), title, true);
-        setSize(new Dimension(450, 245));
+        setSize(new Dimension(600, 270));
         setResizable(false);
         setLocationRelativeTo(MainWindow.getInstance());
         setLayout(new BorderLayout());
@@ -83,6 +84,7 @@ public class UpdateSourceDialog extends JDialog {
             baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/") + 1);
         }
         baseUrlField.setText(baseUrl);
+        extensionsDirField.setText(baseUrl + "extensions/");
     }
 
     private void buttonHandler(boolean okay) {
@@ -104,17 +106,18 @@ public class UpdateSourceDialog extends JDialog {
         }
         manifestField.setText(baseUrl + "version_manifest.json");
         publicKeyField.setText(baseUrl + "public.key");
+        extensionsDirField.setText(baseUrl + "extensions/");
     }
 
     private JPanel buildFormPanel() {
         formPanel = new FormPanel(Alignment.TOP_LEFT);
         formPanel.setBorderMargin(16);
 
-        nameField = new ShortTextField("Source name:", 20);
+        nameField = new ShortTextField("Source name:", 32);
         nameField.setAllowBlank(false);
         formPanel.add(nameField);
 
-        baseUrlField = new ShortTextField("Base URL:", 20);
+        baseUrlField = new ShortTextField("Base URL:", 32);
         baseUrlField.setAllowBlank(false);
         baseUrlField.addFieldValidator(new URLValidator(false));
         baseUrlField.addValueChangedListener(field -> updateJsonUrls());
@@ -125,6 +128,9 @@ public class UpdateSourceDialog extends JDialog {
 
         publicKeyField = new LabelField("Public key URL:", "");
         formPanel.add(publicKeyField);
+
+        extensionsDirField = new LabelField("Extensions:", "");
+        formPanel.add(extensionsDirField);
 
         return formPanel;
     }
