@@ -51,6 +51,9 @@ public class Main {
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
+                if (args.length == 1) {
+                    window.setStartupProjectFile(new File(args[0]));
+                }
                 window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 window.setVisible(true);
             }

@@ -6,6 +6,7 @@ import ca.corbett.extras.image.ImagePanelConfig;
 import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.packager.Version;
+import ca.corbett.packager.project.ProjectManager;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
@@ -24,6 +25,7 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.logging.Level;
@@ -46,6 +48,7 @@ public class MainWindow extends JFrame {
     private JList<String> cardList;
     private JPanel contentPanel;
     private final Desktop desktop;
+    private File startupProjectFile = null;
 
     private MainWindow() {
         super(Version.APPLICATION_NAME + " " + Version.VERSION);
@@ -75,6 +78,27 @@ public class MainWindow extends JFrame {
         addContentPanel(new VersionManifestCard(), "Version manifest", 4);
         addContentPanel(new JarSigningCard(), "Jar signing", 5);
         addContentPanel(new UploadCard(), "Upload", 6);
+    }
+
+    /**
+     * Invoked only from Main in the event we get a command line arg for a project to open on startup.
+     * Calling this after MainWindow is shown does nothing.
+     */
+    public void setStartupProjectFile(File file) {
+        startupProjectFile = file;
+    }
+
+    @Override
+    public void setVisible(boolean visible) {
+        super.setVisible(true);
+        if (startupProjectFile != null) {
+            try {
+                ProjectManager.getInstance().loadProject(startupProjectFile);
+            }
+            catch (IOException ioe) {
+                getMessageUtil().error("Unable to load startup project: " + ioe.getMessage(), ioe);
+            }
+        }
     }
 
     public static MainWindow getInstance() {
