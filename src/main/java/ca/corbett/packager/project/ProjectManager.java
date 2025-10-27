@@ -27,6 +27,7 @@ public class ProjectManager {
     private final List<ProjectListener> projectListeners = new ArrayList<>();
     private Project project;
     private boolean isSaveInProgress = false;
+    private boolean isLoadInProgress = false;
 
     private ProjectManager() {
 
@@ -59,18 +60,32 @@ public class ProjectManager {
      * Attempts to load the given ext-packager Project from the given project file.
      */
     public void loadProject(File projectFile) throws IOException {
-        project = Project.fromFile(projectFile);
-        MainWindow.getInstance().projectOpened();
-        fireProjectLoadedEvent(project);
+        if (isLoadInProgress) {
+            return;
+        }
+        log.info("Loading project: " + projectFile.getAbsolutePath());
+        isLoadInProgress = true;
+        try {
+            project = Project.fromFile(projectFile);
+            MainWindow.getInstance().projectOpened();
+            fireProjectLoadedEvent(project);
+        }
+        finally {
+            // Extremely cheesy, but we have to wait for coalescing doc listeners to finish responding to the save.
+            Timer timer = new Timer(CoalescingDocumentListener.DELAY_MS * 2, e -> isLoadInProgress = false);
+            timer.setRepeats(false);
+            timer.start();
+        }
     }
 
     /**
      * Saves any changes to the current Project, if one is open.
      */
     public void save() throws IOException {
-        if (project == null || isSaveInProgress) {
+        if (project == null || isSaveInProgress || isLoadInProgress) {
             return;
         }
+        log.info("Saving current project");
         isSaveInProgress = true;
         try {
             project.save();
