@@ -1,7 +1,9 @@
 package ca.corbett.packager.ui;
 
+import ca.corbett.extensions.AppExtensionInfo;
 import ca.corbett.extras.LookAndFeelManager;
 import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
@@ -9,6 +11,7 @@ import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ListField;
 import ca.corbett.forms.fields.PanelField;
 import ca.corbett.forms.fields.ShortTextField;
+import ca.corbett.packager.AppConfig;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
@@ -17,12 +20,14 @@ import ca.corbett.updates.VersionManifest;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
+import javax.swing.filechooser.FileFilter;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -30,8 +35,13 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -130,20 +140,122 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     }
 
     /**
+     * Invoked internally to return the given application version, creating and adding to
+     * the list first if necessary.
+     */
+    private VersionManifest.ApplicationVersion findOrCreateApplicationVersion(String version) {
+        DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
+        VersionManifest.ApplicationVersion appVersion = null;
+        for (int i = 0; i < listModel.size(); i++) {
+            if (listModel.getElementAt(i).getVersion().equals(version)) {
+                return listModel.getElementAt(i);
+            }
+        }
+        appVersion = new VersionManifest.ApplicationVersion();
+        appVersion.setVersion(version);
+        listModel.addElement(appVersion); // todo we should sort the list as stuff gets added
+        return appVersion;
+    }
+
+    /**
      * Pops a file browser for automatically importing extension jars.
      */
     private void importExtensions() {
-        // TODO pop a file/directory chooser
-        // If a directory is chosen, scan it recursively for all jar files
-        // otherwise, allow individual jar file(s) to be chosen
-        // either way, extract the extInfo.json out of each one
-        // if its targetApplicationVersion already exists, add this extension to that version
-        // otherwise, implicitly create an ApplicationVersion, add it to the list, and add this extension to it
-        // Sort the ApplicationVersion list after we're done?
-        //
-        // NOTE: the extension(s) we find may already exist!
-        //       Overwrite if different from what we have, or leave it alone if it matches
-        //       This allows a batch import to safely add any new or changed extensions without duplicating existing ones
+        JFileChooser fileChooser = createExtensionFileChooser();
+        if (fileChooser.showOpenDialog(MainWindow.getInstance()) == JFileChooser.CANCEL_OPTION) {
+            return;
+        }
+
+        Set<File> extensionJars = new HashSet<>();
+        for (File file : fileChooser.getSelectedFiles()) {
+            if (file.isFile()) {
+                extensionJars.add(file);
+            }
+            else if (file.isDirectory()) {
+                extensionJars.addAll(FileSystemUtil.findFiles(file, true, "jar"));
+            }
+        }
+        int succeeded = 0;
+        for (File candidateJar : extensionJars) {
+            try {
+
+                // TODO THIS METHOD WAY TOO LARGE - BREAK IT DOWN!
+
+                // Parse extInfo.json out of this jar:
+                String extInfoStr = FileSystemUtil.extractTextFileFromJar("extInfo.json", candidateJar);
+                if (extInfoStr == null) {
+                    throw new Exception("No extInfo.json found in jar.");
+                }
+                AppExtensionInfo extInfo = AppExtensionInfo.fromJson(extInfoStr);
+                if (extInfo == null) {
+                    throw new Exception("extInfo.json can't be parsed.");
+                }
+
+                // Make sure this extension is intended for this application!
+                if (!appNameField.getText().equals(extInfo.getTargetAppName())) {
+                    throw new Exception("this jar targets the wrong application (" + extInfo.getTargetAppName() + ")");
+                }
+
+                // Find or create the application version that this extension targets:
+                VersionManifest.ApplicationVersion appVersion = findOrCreateApplicationVersion(
+                        extInfo.getTargetAppVersion());
+
+                // This application version may or may not already contain this extension:
+                VersionManifest.Extension extension = null;
+                for (VersionManifest.Extension ext : appVersion.getExtensions()) {
+                    if (ext.getName().equals(extInfo.getName())) {
+                        extension = ext;
+                        break;
+                    }
+                }
+
+                // If it doesn't, create a new, blank one:
+                if (extension == null) {
+                    extension = new VersionManifest.Extension();
+                    extension.setName(extInfo.getName());
+                    appVersion.addExtension(extension);
+                }
+
+                // This extension may or may not already have this version of the extension:
+                VersionManifest.ExtensionVersion extVersion = null;
+                for (VersionManifest.ExtensionVersion version : extension.getVersions()) {
+                    if (version.getExtInfo().getVersion().equals(extInfo.getVersion())) {
+                        extVersion = version;
+                        break;
+                    }
+                }
+
+                // If it doesn't, create a new one:
+                if (extVersion == null) {
+                    extVersion = new VersionManifest.ExtensionVersion();
+                    extVersion.setExtInfo(extInfo);
+                    // TODO set signature and download urls!
+                    extension.addVersion(extVersion);
+                }
+
+                // Now copy this jar file to our project dir:
+                File extensionsDir = ProjectManager.getInstance().getProject().getExtensionsDir();
+                File appVersionDir = new File(extensionsDir, appVersion.getVersion());
+                if (!appVersionDir.exists()) {
+                    appVersionDir.mkdirs();
+                }
+                Files.copy(candidateJar.toPath(), new File(appVersionDir, candidateJar.getName()).toPath());
+                succeeded++;
+            }
+            catch (Exception ioe) {
+                log.log(Level.SEVERE,
+                        "Problem with jar " + candidateJar.getAbsolutePath() + ": " + ioe.getMessage(),
+                        ioe);
+            }
+        }
+
+        if (succeeded != extensionJars.size()) {
+            getMessageUtil().warning("Warning", "Not all jars could be imported. See log for details.");
+        }
+        if (succeeded > 0) {
+            getMessageUtil().info("Successfully imported " + succeeded + " extension jars.");
+            saveChanges();
+        }
     }
 
     private void addApplicationVersion(VersionManifest.ApplicationVersion version) {
@@ -272,6 +384,27 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             setBackground(isSelected ? selectedBg : normalBg);
             return this;
         }
+    }
+
+    /**
+     * Creates and returns a JFileChooser suitable for choosing jars or directories of jars.
+     */
+    private static JFileChooser createExtensionFileChooser() {
+        JFileChooser fileChooser = new JFileChooser(AppConfig.getInstance().getProjectBaseDir());
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || f.getName().endsWith(".jar");
+            }
+
+            @Override
+            public String getDescription() {
+                return "Jar files (*.jar)";
+            }
+        });
+        return fileChooser;
     }
 
     private MessageUtil getMessageUtil() {

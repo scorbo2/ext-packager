@@ -36,6 +36,7 @@ public class Project {
     private final FileBasedProperties props;
     private final File projectDir;
     private final File distDir;
+    private final File extensionsDir;
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
@@ -53,7 +54,8 @@ public class Project {
         this.name = name;
         this.props = props;
         this.projectDir = props.getFile().getParentFile();
-        this.distDir = new File(props.getFile().getParentFile(), "dist");
+        this.distDir = new File(projectDir, "dist");
+        this.extensionsDir = new File(projectDir, "extensions");
         this.publicKey = publicKey;
         this.privateKey = privateKey;
         this.updateSources = new UpdateSources(name);
@@ -91,6 +93,13 @@ public class Project {
      */
     public File getDistDir() {
         return distDir;
+    }
+
+    /**
+     * Returns the extensions dir for this project (this is projectDir/extensions).
+     */
+    public File getExtensionsDir() {
+        return extensionsDir;
     }
 
     /**
@@ -212,6 +221,15 @@ public class Project {
         if (distDir.exists() && !distDir.isDirectory()) {
             throw new IOException("Distribution directory is corrupt in this location.");
         }
+        File extensionsDir = new File(projectDir, "extensions");
+        if (!extensionsDir.exists()) {
+            if (!extensionsDir.mkdirs()) {
+                throw new IOException("Unable to create extensions directory in this location.");
+            }
+        }
+        if (extensionsDir.exists() && !extensionsDir.isDirectory()) {
+            throw new IOException("Extensions directory is corrupt in this location");
+        }
         FileBasedProperties props = new FileBasedProperties(new File(projectDir, name + ".extpkg"));
         props.setString("projectName", name);
         props.save();
@@ -227,6 +245,10 @@ public class Project {
         File distDir = new File(projectDir, "dist");
         if (!distDir.exists() || !distDir.isDirectory()) {
             throw new IOException("Unable to find the distribution directory in this location.");
+        }
+        File extensionsDir = new File(projectDir, "extensions");
+        if (!extensionsDir.exists() || !extensionsDir.isDirectory()) {
+            throw new IOException("Unable to find the extensions directory in this location.");
         }
         FileBasedProperties props = new FileBasedProperties(projectFile);
         props.load();

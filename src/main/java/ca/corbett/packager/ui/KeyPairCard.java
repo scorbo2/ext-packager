@@ -87,6 +87,7 @@ public class KeyPairCard extends JPanel implements ProjectListener {
         try {
             KeyPair keyPair = SignatureUtil.generateKeyPair();
             ProjectManager.getInstance().getProject().setKeyPair(keyPair);
+            populateFields(ProjectManager.getInstance().getProject());
             ProjectManager.getInstance().save();
         }
         catch (Exception e) {
