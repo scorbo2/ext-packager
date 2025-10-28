@@ -1,6 +1,5 @@
 package ca.corbett.packager.ui;
 
-import ca.corbett.extensions.AppExtensionInfo;
 import ca.corbett.extras.LookAndFeelManager;
 import ca.corbett.extras.MessageUtil;
 import ca.corbett.extras.io.FileSystemUtil;
@@ -37,7 +36,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -140,24 +138,6 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     }
 
     /**
-     * Invoked internally to return the given application version, creating and adding to
-     * the list first if necessary.
-     */
-    private VersionManifest.ApplicationVersion findOrCreateApplicationVersion(String version) {
-        DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
-        VersionManifest.ApplicationVersion appVersion = null;
-        for (int i = 0; i < listModel.size(); i++) {
-            if (listModel.getElementAt(i).getVersion().equals(version)) {
-                return listModel.getElementAt(i);
-            }
-        }
-        appVersion = new VersionManifest.ApplicationVersion();
-        appVersion.setVersion(version);
-        listModel.addElement(appVersion); // todo we should sort the list as stuff gets added
-        return appVersion;
-    }
-
-    /**
      * Pops a file browser for automatically importing extension jars.
      */
     private void importExtensions() {
@@ -176,76 +156,15 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             }
         }
         int succeeded = 0;
+        VersionManifest versionManifest = generateVersionManifest();
         for (File candidateJar : extensionJars) {
             try {
-
-                // TODO THIS METHOD WAY TOO LARGE - BREAK IT DOWN!
-
-                // Parse extInfo.json out of this jar:
-                String extInfoStr = FileSystemUtil.extractTextFileFromJar("extInfo.json", candidateJar);
-                if (extInfoStr == null) {
-                    throw new Exception("No extInfo.json found in jar.");
-                }
-                AppExtensionInfo extInfo = AppExtensionInfo.fromJson(extInfoStr);
-                if (extInfo == null) {
-                    throw new Exception("extInfo.json can't be parsed.");
-                }
-
-                // Make sure this extension is intended for this application!
-                if (!appNameField.getText().equals(extInfo.getTargetAppName())) {
-                    throw new Exception("this jar targets the wrong application (" + extInfo.getTargetAppName() + ")");
-                }
-
-                // Find or create the application version that this extension targets:
-                VersionManifest.ApplicationVersion appVersion = findOrCreateApplicationVersion(
-                        extInfo.getTargetAppVersion());
-
-                // This application version may or may not already contain this extension:
-                VersionManifest.Extension extension = null;
-                for (VersionManifest.Extension ext : appVersion.getExtensions()) {
-                    if (ext.getName().equals(extInfo.getName())) {
-                        extension = ext;
-                        break;
-                    }
-                }
-
-                // If it doesn't, create a new, blank one:
-                if (extension == null) {
-                    extension = new VersionManifest.Extension();
-                    extension.setName(extInfo.getName());
-                    appVersion.addExtension(extension);
-                }
-
-                // This extension may or may not already have this version of the extension:
-                VersionManifest.ExtensionVersion extVersion = null;
-                for (VersionManifest.ExtensionVersion version : extension.getVersions()) {
-                    if (version.getExtInfo().getVersion().equals(extInfo.getVersion())) {
-                        extVersion = version;
-                        break;
-                    }
-                }
-
-                // If it doesn't, create a new one:
-                if (extVersion == null) {
-                    extVersion = new VersionManifest.ExtensionVersion();
-                    extVersion.setExtInfo(extInfo);
-                    // TODO set signature and download urls!
-                    extension.addVersion(extVersion);
-                }
-
-                // Now copy this jar file to our project dir:
-                File extensionsDir = ProjectManager.getInstance().getProject().getExtensionsDir();
-                File appVersionDir = new File(extensionsDir, appVersion.getVersion());
-                if (!appVersionDir.exists()) {
-                    appVersionDir.mkdirs();
-                }
-                Files.copy(candidateJar.toPath(), new File(appVersionDir, candidateJar.getName()).toPath());
+                ProjectManager.getInstance().importExtensionJar(versionManifest, candidateJar);
                 succeeded++;
             }
-            catch (Exception ioe) {
-                log.log(Level.SEVERE,
-                        "Problem with jar " + candidateJar.getAbsolutePath() + ": " + ioe.getMessage(),
-                        ioe);
+            catch (Exception e) {
+                log.warning(e.getMessage());
+                log.log(Level.FINE, "Problem with jar " + candidateJar.getAbsolutePath() + ": " + e.getMessage(), e);
             }
         }
 
@@ -254,6 +173,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
         if (succeeded > 0) {
             getMessageUtil().info("Successfully imported " + succeeded + " extension jars.");
+            populateFields(versionManifest);
             saveChanges();
         }
     }
@@ -302,13 +222,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     }
 
     /**
-     * Invoked internally to commit changes to the version manifest.
+     * Given the current state of our UI fields, generate and return a VersionManifest.
      */
-    private void saveChanges() {
-        if (!formPanel.isFormValid()) {
-            return;
-        }
-
+    private VersionManifest generateVersionManifest() {
         VersionManifest manifest = new VersionManifest();
         manifest.setApplicationName(appNameField.getText());
         DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
@@ -316,8 +232,18 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             manifest.addApplicationVersion(listModel.getElementAt(i));
         }
         //manifest.setManifestGenerated(); // TODO do we set this each time? or once on upload?
+        return manifest;
+    }
 
-        ProjectManager.getInstance().getProject().setVersionManifest(manifest);
+    /**
+     * Invoked internally to commit changes to the version manifest.
+     */
+    private void saveChanges() {
+        if (!formPanel.isFormValid()) {
+            return;
+        }
+
+        ProjectManager.getInstance().getProject().setVersionManifest(generateVersionManifest());
         ProjectManager.getInstance().removeProjectListener(this);
         try {
             ProjectManager.getInstance().save();
@@ -330,24 +256,26 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
     }
 
-    private void populateFields(Project project) {
+    private void populateFields(VersionManifest versionManifest) {
         // Dumb initial value in case the proper application name is not set:
-        if (project == null || project.getVersionManifest() == null) {
+        if (versionManifest == null) {
             appNameField.setText("");
-        }
-
-        if (project == null || project.getVersionManifest() == null) {
             return;
         }
 
         DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
         listModel.clear();
-        for (VersionManifest.ApplicationVersion version : project.getVersionManifest().getApplicationVersions()) {
+        List<VersionManifest.ApplicationVersion> sortedList = versionManifest
+                .getApplicationVersions()
+                .stream()
+                .sorted((a, b) -> a.getVersion().compareTo(b.getVersion()))
+                .toList();
+        for (VersionManifest.ApplicationVersion version : sortedList) {
             addApplicationVersion(version);
         }
 
         // Now we can set a more intelligent default value for application name:
-        appNameField.setText(project.getVersionManifest().getApplicationName());
+        appNameField.setText(versionManifest.getApplicationName());
     }
 
     /**
@@ -356,12 +284,12 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
      */
     @Override
     public void projectLoaded(Project project) {
-        populateFields(project);
+        populateFields(project.getVersionManifest());
     }
 
     @Override
     public void projectSaved(Project project) {
-        populateFields(project);
+        populateFields(project.getVersionManifest());
     }
 
     /**
