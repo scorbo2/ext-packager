@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -296,14 +297,44 @@ public class ProjectManager {
     public void copyJarToProjectDirectory(File jar, String appVersion) throws IOException {
         File extensionsDir = ProjectManager.getInstance().getProject().getExtensionsDir();
         File appVersionDir = new File(extensionsDir, appVersion);
-
         if (!appVersionDir.exists()) {
             appVersionDir.mkdirs();
         }
 
+        // Copy the jar itself:
         File targetFile = new File(appVersionDir, jar.getName());
         Files.copy(jar.toPath(), targetFile.toPath());
-        // TODO look for and copy all screenshots
+
+        // Also look for screenshots to import:
+        for (File screenshot : findScreenshots(jar)) {
+            log.info("Importing extension screenshot: " + screenshot.getName());
+            targetFile = new File(appVersionDir, screenshot.getName());
+            Files.copy(screenshot.toPath(), targetFile.toPath());
+        }
+    }
+
+    public List<File> findScreenshots(File jarFile) {
+        if (jarFile == null || !jarFile.exists() || !jarFile.canRead() || !jarFile.isDirectory()) {
+            return List.of();
+        }
+        File[] files = jarFile.getParentFile().listFiles();
+        if (files == null) {
+            return List.of();
+        }
+
+        String basename = jarFile.getName();
+        if (basename.toLowerCase().endsWith(".jar")) {
+            basename = basename.substring(0, basename.lastIndexOf(".jar"));
+        }
+        final String basenameFinal = basename;
+        return Arrays.stream(files)
+                     .filter(f -> f.getName().startsWith(basenameFinal) && isImageFile(f))
+                     .toList();
+    }
+
+    private boolean isImageFile(File f) {
+        String name = f.getName().toLowerCase();
+        return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith("gif");
     }
 
     /**
