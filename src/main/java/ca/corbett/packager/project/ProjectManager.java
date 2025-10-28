@@ -221,12 +221,13 @@ public class ProjectManager {
      * Attempts to import the given extensionJar into the given versionManifest.
      * If any error occurs, an Exception is thrown and the given versionManifest is not modified.
      */
-    public void importExtensionJar(VersionManifest versionManifest, File extensionJar) throws Exception {
+    public ExtensionVersion importExtensionJar(VersionManifest versionManifest, File extensionJar) throws Exception {
         AppExtensionInfo extInfo = getExtInfoFromJar(extensionJar, versionManifest.getApplicationName());
         ApplicationVersion appVersion = findOrCreateApplicationVersion(versionManifest, extInfo.getTargetAppVersion());
         Extension extension = findOrCreateExtension(appVersion, extInfo.getName());
-        findOrCreateExtensionVersion(extension, extInfo);
+        ExtensionVersion extensionVersion = findOrCreateExtensionVersion(extension, extInfo);
         copyJarToProjectDirectory(extensionJar, appVersion.getVersion());
+        return extensionVersion;
     }
 
     /**
@@ -290,6 +291,58 @@ public class ProjectManager {
     }
 
     /**
+     * Cleans up all files associated with the given ApplicationVersion within our ExtPackager project directory.
+     */
+    public void removeApplicationVersion(ApplicationVersion appVersion) throws IOException {
+        for (Extension extension : appVersion.getExtensions()) {
+            removeExtension(extension);
+        }
+        File extDir = new File(getProject().getExtensionsDir(), appVersion.getVersion());
+        if (extDir.exists() && extDir.isDirectory()) {
+            Files.delete(extDir.toPath());
+        }
+    }
+
+    /**
+     * Cleans up all files associated with the given Extension within our ExtPackager project directory.
+     */
+    public void removeExtension(Extension extension) throws IOException {
+        for (ExtensionVersion extensionVersion : extension.getVersions()) {
+            removeExtensionVersion(extensionVersion);
+        }
+    }
+
+    /**
+     * Cleans up all files associated with the given ExtensionVersion within our ExtPackager project directory.
+     */
+    public void removeExtensionVersion(ExtensionVersion extensionVersion) throws IOException {
+        File parentDir = new File(getProject().getExtensionsDir(), extensionVersion.getExtInfo().getTargetAppVersion());
+        if (!parentDir.exists() || !parentDir.isDirectory()) {
+            return;
+        }
+        if (extensionVersion.getDownloadUrl() == null) {
+            return; // wonky case but this may not be set if the json is invalid
+        }
+        String jarPath = extensionVersion.getDownloadUrl().getFile();
+        String jarBasename = jarPath.substring(jarPath.lastIndexOf("/") + 1);
+        if (jarBasename.toLowerCase().endsWith(".jar")) {
+            jarBasename = jarBasename.substring(0, jarBasename.length() - 4);
+        }
+        File[] files = parentDir.listFiles();
+        if (files != null) {
+            for (File toDelete : files) {
+                // Theoretical problem: extension 1 is "myExtension" and 2 is "myExtensionAgain"
+                //    if you removeExtension("myExtension") we'll delete them both here because
+                //    we're just looking at what the name starts with (they both start with "myExtension").
+                //    With proper extension naming, this isn't an issue, but it could happen...
+                if (toDelete.getName().startsWith(jarBasename)) {
+                    Files.delete(toDelete.toPath());
+                }
+            }
+        }
+    }
+
+    /**
      * Copies the given jar to our project's extensions directory, into a subdirectory named
      * after the given application version. If any screenshots exist for the given jar (matching
      * the jar's basename but with an image extension), they will also be copied.
@@ -309,10 +362,28 @@ public class ProjectManager {
         for (File screenshot : findScreenshots(jar)) {
             log.info("Importing extension screenshot: " + screenshot.getName());
             targetFile = new File(appVersionDir, screenshot.getName());
-            Files.copy(screenshot.toPath(), targetFile.toPath());
+            Files.copy(screenshot.toPath(),
+                       targetFile.toPath()); // TODO I think this is stupid enough to fail if the target exists
         }
     }
 
+    /**
+     * Returns a list of screenshots associated with the given jar file, if any.
+     * Any image file of a supported type (jpg, png, or gif) that is found with the same base
+     * name as the given jar file will be considered a match. For example, given a
+     * jar file named "myExtension.jar":
+     * <ul>
+     *     <li><b>myExtension.jpg</b> would match
+     *     <li><b>myExtension1.jpg</b> would match
+     *     <li><b>myExtension_superAwesomeScreenshot.jpg</b> would match
+     *     <li><b>MyExtension.jpg</b> would NOT match - wrong case
+     *     <li><b>myExt1.jpg</b> would NOT match - incomplete base name
+     *     <li><b>myExtension1.tiff</b> would NOT match - unsupported image type
+     * </ul>
+     * <p>
+     * If no matching screenshots are found, an empty list is returned.
+     * </p>
+     */
     public List<File> findScreenshots(File jarFile) {
         if (jarFile == null || !jarFile.exists() || !jarFile.canRead() || !jarFile.isDirectory()) {
             return List.of();

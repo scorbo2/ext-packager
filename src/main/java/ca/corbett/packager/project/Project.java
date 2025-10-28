@@ -55,7 +55,7 @@ public class Project {
         this.props = props;
         this.projectDir = props.getFile().getParentFile();
         this.distDir = new File(projectDir, "dist");
-        this.extensionsDir = new File(projectDir, "extensions");
+        this.extensionsDir = new File(distDir, "extensions");
         this.publicKey = publicKey;
         this.privateKey = privateKey;
         this.updateSources = new UpdateSources(name);
@@ -96,7 +96,7 @@ public class Project {
     }
 
     /**
-     * Returns the extensions dir for this project (this is projectDir/extensions).
+     * Returns the extensions dir for this project (this is projectDir/dist/extensions).
      */
     public File getExtensionsDir() {
         return extensionsDir;
@@ -221,7 +221,7 @@ public class Project {
         if (distDir.exists() && !distDir.isDirectory()) {
             throw new IOException("Distribution directory is corrupt in this location.");
         }
-        File extensionsDir = new File(projectDir, "extensions");
+        File extensionsDir = new File(distDir, "extensions");
         if (!extensionsDir.exists()) {
             if (!extensionsDir.mkdirs()) {
                 throw new IOException("Unable to create extensions directory in this location.");
@@ -246,7 +246,7 @@ public class Project {
         if (!distDir.exists() || !distDir.isDirectory()) {
             throw new IOException("Unable to find the distribution directory in this location.");
         }
-        File extensionsDir = new File(projectDir, "extensions");
+        File extensionsDir = new File(distDir, "extensions");
         if (!extensionsDir.exists() || !extensionsDir.isDirectory()) {
             throw new IOException("Unable to find the extensions directory in this location.");
         }
