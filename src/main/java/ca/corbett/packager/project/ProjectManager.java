@@ -420,13 +420,15 @@ public class ProjectManager {
     }
 
     private void fireProjectLoadedEvent(Project project) {
-        for (ProjectListener listener : projectListeners) {
+        List<ProjectListener> copy = new ArrayList<>(projectListeners);
+        for (ProjectListener listener : copy) {
             listener.projectLoaded(project);
         }
     }
 
     private void fireProjectSavedEvent(Project project) {
-        for (ProjectListener listener : projectListeners) {
+        List<ProjectListener> copy = new ArrayList<>(projectListeners);
+        for (ProjectListener listener : copy) {
             listener.projectSaved(project);
         }
     }
