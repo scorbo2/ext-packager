@@ -4,11 +4,14 @@ import ca.corbett.extensions.AppExtensionInfo;
 import ca.corbett.extras.CoalescingDocumentListener;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.packager.ui.MainWindow;
+import ca.corbett.updates.UpdateManager;
+import ca.corbett.updates.UpdateSources;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.Timer;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -401,6 +404,40 @@ public class ProjectManager {
         return Arrays.stream(files)
                      .filter(f -> f.getName().startsWith(basenameFinal) && isImageFile(f))
                      .toList();
+    }
+
+    /**
+     * Given a URL for the given UpdateSource (jar download url, signature url, public key url, or
+     * screenshot url), this method will return the matching File within our project directory.
+     * No check is done that the file actually exists! This is where the File <i>should</i> be,
+     * not where it necessarily is.
+     */
+    public File getProjectFileFromURL(UpdateSources.UpdateSource updateSource, URL url) {
+        // TODO this only works for files directly under dist/
+        //      but screenshots and jars are in nested subdirectories...
+
+        String path = UpdateManager.unresolveUrl(updateSource.getBaseUrl(), url);
+        return path == null ? null : new File(project.getDistDir(), path);
+    }
+
+    /**
+     * Given a project file (literally anything in the dist directory), this method will generate
+     * a URL suitable for the given UpdateSource. If the given File is not within our project's dist directory,
+     * the result is null.
+     */
+    public URL getURLFromProjectFile(UpdateSources.UpdateSource updateSource, File file) {
+        // TODO this only works for files directly under dist/
+        //      but screenshots and jars are in nested subdirectories...
+
+        String filePath = file.getAbsolutePath();
+        if (!filePath.startsWith(project.getDistDir().getAbsolutePath())) {
+            return null;
+        }
+        String path = filePath.replace(project.getDistDir().getAbsolutePath(), "");
+        if (path.startsWith(File.separator)) {
+            path = path.substring(1);
+        }
+        return UpdateManager.resolveUrl(updateSource.getBaseUrl(), path);
     }
 
     private boolean isImageFile(File f) {

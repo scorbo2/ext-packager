@@ -55,18 +55,16 @@ public class UpdateSourceDialog extends JDialog {
         }
 
         String name = nameField.getText();
-        URL manifestUrl = null;
-        URL publicKeyUrl = null;
+        URL baseUrl = null;
+        String manifest = "version_manifest.json"; // TODO maybe make this configurable?
+        String publicKey = publicKeyField.getText().isBlank() ? null : publicKeyField.getText();
         try {
-            manifestUrl = new URL(manifestField.getText());
-            if (!publicKeyField.getText().isBlank()) {
-                publicKeyUrl = new URL(publicKeyField.getText());
-            }
+            baseUrl = new URL(baseUrlField.getText());
         }
         catch (MalformedURLException ignored) {
             // it can't fail here because our validators guard us from getting this far if it isn't valid
         }
-        return new UpdateSources.UpdateSource(name, manifestUrl, publicKeyUrl);
+        return new UpdateSources.UpdateSource(name, baseUrl, manifest, publicKey);
     }
 
     public void setUpdateSource(UpdateSources.UpdateSource updateSource) {

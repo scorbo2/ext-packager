@@ -2,10 +2,12 @@ package ca.corbett.packager.ui;
 
 import ca.corbett.extras.LookAndFeelManager;
 import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
+import ca.corbett.forms.fields.ImageListField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ListField;
 import ca.corbett.forms.fields.PanelField;
@@ -14,6 +16,7 @@ import ca.corbett.packager.AppConfig;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
+import ca.corbett.updates.UpdateSources;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.AbstractAction;
@@ -45,6 +48,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -68,6 +72,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     private final ListField<VersionManifest.ApplicationVersion> appVersionListField;
     private final ListField<VersionManifest.Extension> extensionListField;
     private final ListField<VersionManifest.ExtensionVersion> extensionVersionListField;
+    private final ImageListField screenshotField;
 
     public VersionManifestCard() {
         setLayout(new BorderLayout());
@@ -91,6 +96,11 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         //noinspection unchecked
         extensionVersionListField = (ListField<VersionManifest.ExtensionVersion>)buildExtensionVersionListField();
         formPanel.add(extensionVersionListField);
+
+        screenshotField = new ImageListField("Screenshots:", 1, 100);
+        screenshotField.setEnabled(false);
+        screenshotField.setShouldExpand(true);
+        formPanel.add(screenshotField);
 
         add(formPanel, BorderLayout.CENTER);
         ProjectManager.getInstance().addProjectListener(this);
@@ -352,6 +362,42 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
     }
 
+    private void extensionVersionSelectionChanged() {
+        screenshotField.clear();
+
+        // If no extension version is selected, we're done here:
+        int[] selectedIndexes = extensionVersionListField.getSelectedIndexes();
+        if (selectedIndexes.length == 0) {
+            return;
+        }
+
+        // If this project has no update sources defined, we're done here:
+        List<UpdateSources.UpdateSource> updateSources = ProjectManager.getInstance().getProject().getUpdateSources()
+                                                                       .getUpdateSources();
+        if (updateSources.isEmpty()) {
+            return;
+        }
+
+        DefaultListModel<VersionManifest.ExtensionVersion> extensionVersionListModel =
+                (DefaultListModel<VersionManifest.ExtensionVersion>)extensionVersionListField.getListModel();
+        VersionManifest.ExtensionVersion extensionVersion = extensionVersionListModel.getElementAt(selectedIndexes[0]);
+        for (URL url : extensionVersion.getScreenshots()) {
+            // Try to find local image file:
+            File imageFile = ProjectManager.getInstance().getProjectFileFromURL(updateSources.get(0), url);
+            if (imageFile == null) {
+                log.warning("Unable to find screenshot referenced by extension version: " + url);
+                continue;
+            }
+            try {
+                log.info("Loading screenshot: " + imageFile);
+                screenshotField.addImage(ImageUtil.loadImage(imageFile));
+            }
+            catch (IOException ioe) {
+                log.log(Level.SEVERE, "Error loading screenshot: " + ioe.getMessage(), ioe);
+            }
+        }
+    }
+
     /**
      * Builds and returns a ListField for the given parameters.
      */
@@ -423,6 +469,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         listField.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listField.setShouldExpand(true);
         listField.setCellRenderer(new ExtensionVersionListCellRenderer());
+        listField.addValueChangedListener(field -> extensionVersionSelectionChanged());
 
         addDeleteKeyboardHandler(listField, new AbstractAction() {
             @Override

@@ -54,7 +54,7 @@ public class MainWindow extends JFrame {
         super(Version.APPLICATION_NAME + " " + Version.VERSION);
         desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
         setSize(new Dimension(700, 520));
-        setMinimumSize(new Dimension(500, 350));
+        setMinimumSize(new Dimension(500, 400));
         setLayout(new BorderLayout());
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildMenuPanel(), buildContentPanel());
         splitPane.setOneTouchExpandable(false);
