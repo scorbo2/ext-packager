@@ -407,35 +407,80 @@ public class ProjectManager {
     }
 
     /**
-     * Given a URL for the given UpdateSource (jar download url, signature url, public key url, or
-     * screenshot url), this method will return the matching File within our project directory.
+     * Given any root-level URL for the given UpdateSource (public key, version manifest, etc), this
+     * method will return the actual File within the current project's dist subdirectory that
+     * represents that URL.
+     * <p>
      * No check is done that the file actually exists! This is where the File <i>should</i> be,
      * not where it necessarily is.
+     * </p>
+     * <p>
+     *     For extension-specific files, such as jar download URLs or screenshots, use
+     *     getProjectFileFromURL(UpdateSource, ExtensionVersion, URL) instead.
+     * </p>
+     * <p>
+     *     If no project is currently open, the result is null.
+     * </p>
      */
     public File getProjectFileFromURL(UpdateSources.UpdateSource updateSource, URL url) {
-        // TODO this only works for files directly under dist/
-        //      but screenshots and jars are in nested subdirectories...
+        return getProjectFileFromURL(updateSource, null, url);
+    }
 
+    /**
+     * Given any extension-specific URL for the given UpdateSource (jar download, screenshot, etc), this
+     * method will return the actual File within the project's dist directory structure that
+     * represents that URL.
+     * <p>
+     * No check is done that the file actually exists! This is where the File <i>should</i> be,
+     * not where it necessarily is.
+     * </p>
+     * <p>
+     * For top-level project files, such as public key or version manifest, use
+     * getProjectFileFromURL(UpdateSource, URL) instead, or you can specify null
+     * for the ExtensionVersion.
+     * </p>
+     * <p>
+     * If no project is currently open, the result is null.
+     * </p>
+     */
+    public File getProjectFileFromURL(UpdateSources.UpdateSource updateSource,
+                                      ExtensionVersion extensionVersion,
+                                      URL url) {
+        if (project == null) {
+            return null;
+        }
+
+        // Containing dir will either be directly under dist/ or in an extension-specific child directory:
+        File containingDir = extensionVersion == null
+                ? project.getDistDir()
+                : new File(project.getDistDir(), "extensions/" + extensionVersion.getExtInfo().getTargetAppVersion());
+
+        // Now we can unresolve the given URL and map it to our project's directory structure:
         String path = UpdateManager.unresolveUrl(updateSource.getBaseUrl(), url);
-        return path == null ? null : new File(project.getDistDir(), path);
+        return path == null ? null : new File(containingDir, path);
+
     }
 
     /**
      * Given a project file (literally anything in the dist directory), this method will generate
      * a URL suitable for the given UpdateSource. If the given File is not within our project's dist directory,
-     * the result is null.
+     * the result is null. If no project is currently open, the result is null.
      */
     public URL getURLFromProjectFile(UpdateSources.UpdateSource updateSource, File file) {
-        // TODO this only works for files directly under dist/
-        //      but screenshots and jars are in nested subdirectories...
+        if (project == null) {
+            return null;
+        }
 
+        // Make sure the file lives in our dist directory:
         String filePath = file.getAbsolutePath();
         if (!filePath.startsWith(project.getDistDir().getAbsolutePath())) {
             return null;
         }
+
+        // Now whatever path it has relative to our dist dir can be used to formulate the URL with our base:
         String path = filePath.replace(project.getDistDir().getAbsolutePath(), "");
         if (path.startsWith(File.separator)) {
-            path = path.substring(1);
+            path = path.substring(1); // lose any leading / in the path
         }
         return UpdateManager.resolveUrl(updateSource.getBaseUrl(), path);
     }
