@@ -71,6 +71,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     private final ListField<VersionManifest.Extension> extensionListField;
     private final ListField<VersionManifest.ExtensionVersion> extensionVersionListField;
     private final ImageListField screenshotField;
+    private boolean autoSave = false;
 
     public VersionManifestCard() {
         setLayout(new BorderLayout());
@@ -103,6 +104,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
 
         add(formPanel, BorderLayout.CENTER);
         ProjectManager.getInstance().addProjectListener(this);
+        autoSave = true;
     }
 
     /**
@@ -142,14 +144,12 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         if (succeeded > 0) {
             getMessageUtil().info("Successfully imported " + succeeded + " extension jars.");
             populateFields(versionManifest);
-            saveChanges();
         }
     }
 
     private void addApplicationVersion(VersionManifest.ApplicationVersion version) {
         DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
         listModel.addElement(version);
-        saveChanges();
     }
 
     /**
@@ -180,7 +180,6 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                                            + ioe.getMessage(), ioe);
         }
         populateFields(generateVersionManifest());
-        saveChanges();
     }
 
     /**
@@ -211,7 +210,6 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                                            + ioe.getMessage(), ioe);
         }
         populateFields(generateVersionManifest());
-        saveChanges();
     }
 
     /**
@@ -243,7 +241,6 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                                            + ioe.getMessage(), ioe);
         }
         populateFields(generateVersionManifest());
-        saveChanges();
     }
 
     /**
@@ -264,6 +261,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
      * Invoked internally to commit changes to the version manifest.
      */
     private void saveChanges() {
+        if (!autoSave) {
+            return;
+        }
         if (!formPanel.isFormValid()) {
             return;
         }
@@ -282,25 +282,33 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     }
 
     private void populateFields(VersionManifest versionManifest) {
-        // Dumb initial value in case the proper application name is not set:
-        if (versionManifest == null) {
-            appNameField.setText("");
-            return;
-        }
+        autoSave = false; // wait until we're fully populated before saving
 
-        DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
-        listModel.clear();
-        List<VersionManifest.ApplicationVersion> sortedList = versionManifest
-                .getApplicationVersions()
-                .stream()
-                .sorted((a, b) -> a.getVersion().compareTo(b.getVersion()))
-                .toList();
-        for (VersionManifest.ApplicationVersion version : sortedList) {
-            addApplicationVersion(version);
-        }
+        try {
+            // Dumb initial value in case the proper application name is not set:
+            if (versionManifest == null) {
+                appNameField.setText("");
+                return;
+            }
 
-        // Now we can set a more intelligent default value for application name:
-        appNameField.setText(versionManifest.getApplicationName());
+            DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
+            listModel.clear();
+            List<VersionManifest.ApplicationVersion> sortedList = versionManifest
+                    .getApplicationVersions()
+                    .stream()
+                    .sorted((a, b) -> a.getVersion().compareTo(b.getVersion()))
+                    .toList();
+            for (VersionManifest.ApplicationVersion version : sortedList) {
+                addApplicationVersion(version);
+            }
+
+            // Now we can set a more intelligent default value for application name:
+            appNameField.setText(versionManifest.getApplicationName());
+        }
+        finally {
+            autoSave = true;
+            saveChanges(); // save once after we're populated
+        }
     }
 
     /**
@@ -330,6 +338,8 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                 (DefaultListModel<VersionManifest.Extension>)extensionListField.getListModel();
         extensionListModel.clear();
 
+        screenshotField.clear();
+
         int[] selectedIndexes = appVersionListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
             return;
@@ -347,6 +357,8 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         DefaultListModel<VersionManifest.ExtensionVersion> extensionVersionListModel =
                 (DefaultListModel<VersionManifest.ExtensionVersion>)extensionVersionListField.getListModel();
         extensionVersionListModel.clear();
+
+        screenshotField.clear();
 
         int[] selectedIndexes = extensionListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
