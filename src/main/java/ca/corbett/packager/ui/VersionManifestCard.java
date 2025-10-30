@@ -16,7 +16,6 @@ import ca.corbett.packager.AppConfig;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
-import ca.corbett.updates.UpdateSources;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.AbstractAction;
@@ -48,7 +47,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -100,6 +98,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         screenshotField = new ImageListField("Screenshots:", 1, 100);
         screenshotField.setEnabled(false);
         screenshotField.setShouldExpand(true);
+        screenshotField.getImageListPanel().setOwnerFrame(MainWindow.getInstance());
         formPanel.add(screenshotField);
 
         add(formPanel, BorderLayout.CENTER);
@@ -371,21 +370,14 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             return;
         }
 
-        // If this project has no update sources defined, we're done here:
-        List<UpdateSources.UpdateSource> updateSources = ProjectManager.getInstance().getProject().getUpdateSources()
-                                                                       .getUpdateSources();
-        if (updateSources.isEmpty()) {
-            return;
-        }
-
         DefaultListModel<VersionManifest.ExtensionVersion> extensionVersionListModel =
                 (DefaultListModel<VersionManifest.ExtensionVersion>)extensionVersionListField.getListModel();
         VersionManifest.ExtensionVersion extensionVersion = extensionVersionListModel.getElementAt(selectedIndexes[0]);
-        for (URL url : extensionVersion.getScreenshots()) {
+        for (String screenshotPath : extensionVersion.getScreenshots()) {
             // Try to find local image file:
-            File imageFile = ProjectManager.getInstance().getProjectFileFromURL(updateSources.get(0), url);
+            File imageFile = ProjectManager.getInstance().getProjectFileFromPath(extensionVersion, screenshotPath);
             if (imageFile == null) {
-                log.warning("Unable to find screenshot referenced by extension version: " + url);
+                log.warning("Unable to find screenshot referenced by extension version: " + screenshotPath);
                 continue;
             }
             try {

@@ -121,6 +121,9 @@ public class NewProjectDialog extends JDialog {
         formPanel.add(nameField);
 
         File projectBaseDir = AppConfig.getInstance().getProjectBaseDir();
+        if (projectBaseDir.isFile() || projectBaseDir.getName().endsWith(".extpkg")) {
+            projectBaseDir = projectBaseDir.getParentFile().getParentFile(); // wonkiness everywhere
+        }
         baseDirField = new FileField("Parent dir:",
                                      projectBaseDir,
                                      24,

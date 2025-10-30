@@ -4,14 +4,11 @@ import ca.corbett.extensions.AppExtensionInfo;
 import ca.corbett.extras.CoalescingDocumentListener;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.packager.ui.MainWindow;
-import ca.corbett.updates.UpdateManager;
-import ca.corbett.updates.UpdateSources;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.Timer;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -229,7 +226,7 @@ public class ProjectManager {
         ApplicationVersion appVersion = findOrCreateApplicationVersion(versionManifest, extInfo.getTargetAppVersion());
         Extension extension = findOrCreateExtension(appVersion, extInfo.getName());
         ExtensionVersion extensionVersion = findOrCreateExtensionVersion(extension, extInfo);
-        copyJarToProjectDirectory(extensionJar, appVersion.getVersion());
+        copyJarToProjectDirectory(extensionVersion, extensionJar, appVersion.getVersion());
         return extensionVersion;
     }
 
@@ -323,13 +320,12 @@ public class ProjectManager {
         if (!parentDir.exists() || !parentDir.isDirectory()) {
             return;
         }
-        if (extensionVersion.getDownloadUrl() == null) {
+        if (extensionVersion.getDownloadPath() == null) {
             return; // wonky case but this may not be set if the json is invalid
         }
-        String jarPath = extensionVersion.getDownloadUrl().getFile();
-        String jarBasename = jarPath.substring(jarPath.lastIndexOf("/") + 1);
-        if (jarBasename.toLowerCase().endsWith(".jar")) {
-            jarBasename = jarBasename.substring(0, jarBasename.length() - 4);
+        String jarPath = extensionVersion.getDownloadPath();
+        if (jarPath.toLowerCase().endsWith(".jar")) {
+            jarPath = jarPath.substring(0, jarPath.length() - 4);
         }
         File[] files = parentDir.listFiles();
         if (files != null) {
@@ -338,7 +334,7 @@ public class ProjectManager {
                 //    if you removeExtension("myExtension") we'll delete them both here because
                 //    we're just looking at what the name starts with (they both start with "myExtension").
                 //    With proper extension naming, this isn't an issue, but it could happen...
-                if (toDelete.getName().startsWith(jarBasename)) {
+                if (toDelete.getName().startsWith(jarPath)) {
                     Files.delete(toDelete.toPath());
                 }
             }
@@ -350,7 +346,8 @@ public class ProjectManager {
      * after the given application version. If any screenshots exist for the given jar (matching
      * the jar's basename but with an image extension), they will also be copied.
      */
-    public void copyJarToProjectDirectory(File jar, String appVersion) throws IOException {
+    public void copyJarToProjectDirectory(ExtensionVersion extensionVersion, File jar, String appVersion)
+            throws IOException {
         File extensionsDir = ProjectManager.getInstance().getProject().getExtensionsDir();
         File appVersionDir = new File(extensionsDir, appVersion);
         if (!appVersionDir.exists()) {
@@ -367,6 +364,7 @@ public class ProjectManager {
             targetFile = new File(appVersionDir, screenshot.getName());
             Files.copy(screenshot.toPath(),
                        targetFile.toPath()); // TODO I think this is stupid enough to fail if the target exists
+            extensionVersion.addScreenshot(targetFile.getName());
         }
     }
 
@@ -388,7 +386,7 @@ public class ProjectManager {
      * </p>
      */
     public List<File> findScreenshots(File jarFile) {
-        if (jarFile == null || !jarFile.exists() || !jarFile.canRead() || !jarFile.isDirectory()) {
+        if (jarFile == null || !jarFile.exists() || !jarFile.canRead() || jarFile.isDirectory()) {
             return List.of();
         }
         File[] files = jarFile.getParentFile().listFiles();
@@ -407,82 +405,55 @@ public class ProjectManager {
     }
 
     /**
-     * Given any root-level URL for the given UpdateSource (public key, version manifest, etc), this
+     * Given any root-level path for the given UpdateSource (public key, version manifest, etc), this
      * method will return the actual File within the current project's dist subdirectory that
-     * represents that URL.
+     * represents that path.
      * <p>
      * No check is done that the file actually exists! This is where the File <i>should</i> be,
      * not where it necessarily is.
      * </p>
      * <p>
      *     For extension-specific files, such as jar download URLs or screenshots, use
-     *     getProjectFileFromURL(UpdateSource, ExtensionVersion, URL) instead.
+     *     getProjectFileFromPath(ExtensionVersion, String) instead.
      * </p>
      * <p>
      *     If no project is currently open, the result is null.
      * </p>
+     * <p><b>EXAMPLE:</b></p>
+     * <pre>getProjectFileFromPath("public.key"); // returns /home/you/yourProjectDir/public.key</pre>
      */
-    public File getProjectFileFromURL(UpdateSources.UpdateSource updateSource, URL url) {
-        return getProjectFileFromURL(updateSource, null, url);
+    public File getProjectFileFromPath(String path) {
+        return getProjectFileFromPath(null, path);
     }
 
     /**
-     * Given any extension-specific URL for the given UpdateSource (jar download, screenshot, etc), this
+     * Given any extension-specific path (jar download, screenshot, signature file, etc), this
      * method will return the actual File within the project's dist directory structure that
-     * represents that URL.
+     * represents that path.
      * <p>
      * No check is done that the file actually exists! This is where the File <i>should</i> be,
      * not where it necessarily is.
      * </p>
      * <p>
      * For top-level project files, such as public key or version manifest, use
-     * getProjectFileFromURL(UpdateSource, URL) instead, or you can specify null
+     * getProjectFileFromPath(String) instead, or you can specify null
      * for the ExtensionVersion.
      * </p>
      * <p>
      * If no project is currently open, the result is null.
      * </p>
+     * <P><b>EXAMPLE:</b></P>
+     * <PRE>
+     * getProjectFileFromPath(myExtensionVersion, "MyExtension-1.0.0.jar");
+     * // This returns "/home/you/yourProjectDir/extensions/1.0/MyExtension-1.0.0.jar"
+     * // (we infer the directory structure based on the target app version of the extension)
+     * </PRE>
      */
-    public File getProjectFileFromURL(UpdateSources.UpdateSource updateSource,
-                                      ExtensionVersion extensionVersion,
-                                      URL url) {
-        if (project == null) {
-            return null;
-        }
-
-        // Containing dir will either be directly under dist/ or in an extension-specific child directory:
+    public File getProjectFileFromPath(ExtensionVersion extensionVersion, String path) {
         File containingDir = extensionVersion == null
                 ? project.getDistDir()
                 : new File(project.getDistDir(), "extensions/" + extensionVersion.getExtInfo().getTargetAppVersion());
-
-        // Now we can unresolve the given URL and map it to our project's directory structure:
-        String path = UpdateManager.unresolveUrl(updateSource.getBaseUrl(), url);
-        return path == null ? null : new File(containingDir, path);
-
-    }
-
-    /**
-     * Given a project file (literally anything in the dist directory), this method will generate
-     * a URL suitable for the given UpdateSource. If the given File is not within our project's dist directory,
-     * the result is null. If no project is currently open, the result is null.
-     */
-    public URL getURLFromProjectFile(UpdateSources.UpdateSource updateSource, File file) {
-        if (project == null) {
-            return null;
-        }
-
-        // Make sure the file lives in our dist directory:
-        String filePath = file.getAbsolutePath();
-        if (!filePath.startsWith(project.getDistDir().getAbsolutePath())) {
-            return null;
-        }
-
-        // Now whatever path it has relative to our dist dir can be used to formulate the URL with our base:
-        String path = filePath.replace(project.getDistDir().getAbsolutePath(), "");
-        if (path.startsWith(File.separator)) {
-            path = path.substring(1); // lose any leading / in the path
-        }
-        return UpdateManager.resolveUrl(updateSource.getBaseUrl(), path);
+        return new File(containingDir, path);
     }
 
     private boolean isImageFile(File f) {
