@@ -2,12 +2,10 @@ package ca.corbett.packager.ui;
 
 import ca.corbett.extras.LookAndFeelManager;
 import ca.corbett.extras.MessageUtil;
-import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
-import ca.corbett.forms.fields.ImageListField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.ListField;
 import ca.corbett.forms.fields.PanelField;
@@ -16,6 +14,7 @@ import ca.corbett.packager.AppConfig;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
+import ca.corbett.packager.ui.dialogs.ExtensionVersionDialog;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.AbstractAction;
@@ -70,7 +69,6 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     private final ListField<VersionManifest.ApplicationVersion> appVersionListField;
     private final ListField<VersionManifest.Extension> extensionListField;
     private final ListField<VersionManifest.ExtensionVersion> extensionVersionListField;
-    private final ImageListField screenshotField;
     private boolean autoSave = false;
 
     public VersionManifestCard() {
@@ -95,12 +93,6 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         //noinspection unchecked
         extensionVersionListField = (ListField<VersionManifest.ExtensionVersion>)buildExtensionVersionListField();
         formPanel.add(extensionVersionListField);
-
-        screenshotField = new ImageListField("Screenshots:", 1, 100);
-        screenshotField.setEnabled(false);
-        screenshotField.setShouldExpand(true);
-        screenshotField.getImageListPanel().setOwnerFrame(MainWindow.getInstance());
-        formPanel.add(screenshotField);
 
         add(formPanel, BorderLayout.CENTER);
         ProjectManager.getInstance().addProjectListener(this);
@@ -338,8 +330,6 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                 (DefaultListModel<VersionManifest.Extension>)extensionListField.getListModel();
         extensionListModel.clear();
 
-        screenshotField.clear();
-
         int[] selectedIndexes = appVersionListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
             return;
@@ -358,8 +348,6 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                 (DefaultListModel<VersionManifest.ExtensionVersion>)extensionVersionListField.getListModel();
         extensionVersionListModel.clear();
 
-        screenshotField.clear();
-
         int[] selectedIndexes = extensionListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
             return;
@@ -373,9 +361,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
     }
 
-    private void extensionVersionSelectionChanged() {
-        screenshotField.clear();
-
+    private void editSelectedExtensionVersion() {
         // If no extension version is selected, we're done here:
         int[] selectedIndexes = extensionVersionListField.getSelectedIndexes();
         if (selectedIndexes.length == 0) {
@@ -385,21 +371,8 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         DefaultListModel<VersionManifest.ExtensionVersion> extensionVersionListModel =
                 (DefaultListModel<VersionManifest.ExtensionVersion>)extensionVersionListField.getListModel();
         VersionManifest.ExtensionVersion extensionVersion = extensionVersionListModel.getElementAt(selectedIndexes[0]);
-        for (String screenshotPath : extensionVersion.getScreenshots()) {
-            // Try to find local image file:
-            File imageFile = ProjectManager.getInstance().getProjectFileFromPath(extensionVersion, screenshotPath);
-            if (imageFile == null) {
-                log.warning("Unable to find screenshot referenced by extension version: " + screenshotPath);
-                continue;
-            }
-            try {
-                log.info("Loading screenshot: " + imageFile);
-                screenshotField.addImage(ImageUtil.loadImage(imageFile));
-            }
-            catch (IOException ioe) {
-                log.log(Level.SEVERE, "Error loading screenshot: " + ioe.getMessage(), ioe);
-            }
-        }
+        ExtensionVersionDialog dialog = new ExtensionVersionDialog(extensionVersion);
+        dialog.setVisible(true);
     }
 
     /**
@@ -473,8 +446,15 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         listField.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listField.setShouldExpand(true);
         listField.setCellRenderer(new ExtensionVersionListCellRenderer());
-        listField.addValueChangedListener(field -> extensionVersionSelectionChanged());
 
+        listField.getList().addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    editSelectedExtensionVersion();
+                }
+            }
+        });
         addDeleteKeyboardHandler(listField, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
