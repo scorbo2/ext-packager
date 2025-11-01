@@ -338,6 +338,13 @@ public class ProjectManager {
         }
         String jarPath = extensionVersion.getDownloadPath();
         Files.delete(new File(parentDir, jarPath).toPath());
+        if (jarPath.toLowerCase().endsWith(".jar")) {
+            jarPath = jarPath.substring(0, jarPath.length() - 4);
+        }
+        File signatureFile = new File(parentDir, jarPath + ".sig");
+        if (signatureFile.exists()) {
+            Files.delete(signatureFile.toPath());
+        }
         removeAllScreenshots(extensionVersion);
     }
 
