@@ -450,12 +450,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         buttonPanel.getMargins().setTop(2);
         buttonPanel.getMargins().setBottom(12);
 
-        JButton button = new JButton("Import");
-        button.addActionListener(e -> importExtensions());
-        button.setPreferredSize(new Dimension(70, 24));
-        buttonPanel.getPanel().add(button);
-
-        button = new JButton("Delete");
+        JButton button = new JButton("Delete");
         button.addActionListener(e -> deleteApplicationVersion());
         button.setPreferredSize(new Dimension(70, 24));
         buttonPanel.getPanel().add(button);
@@ -538,7 +533,12 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         buttonPanel.getMargins().setTop(2);
         buttonPanel.getMargins().setBottom(12);
 
-        JButton button = new JButton("Edit");
+        JButton button = new JButton("Import");
+        button.addActionListener(e -> importExtensions());
+        button.setPreferredSize(new Dimension(70, 24));
+        buttonPanel.getPanel().add(button);
+
+        button = new JButton("Edit");
         button.addActionListener(e -> editSelectedExtensionVersion());
         button.setPreferredSize(new Dimension(70, 24));
         buttonPanel.getPanel().add(button);
