@@ -10,6 +10,7 @@ import javax.swing.Timer;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -225,7 +226,7 @@ public class ProjectManager {
         AppExtensionInfo extInfo = getExtInfoFromJar(extensionJar, versionManifest.getApplicationName());
         ApplicationVersion appVersion = findOrCreateApplicationVersion(versionManifest, extInfo.getTargetAppVersion());
         Extension extension = findOrCreateExtension(appVersion, extInfo.getName());
-        ExtensionVersion extensionVersion = findOrCreateExtensionVersion(extension, extInfo);
+        ExtensionVersion extensionVersion = findOrCreateExtensionVersion(extension, extInfo, extensionJar);
         copyJarToProjectDirectory(extensionVersion, extensionJar, appVersion.getVersion());
         return extensionVersion;
     }
@@ -272,7 +273,7 @@ public class ProjectManager {
      * Searches the given Extension for an ExtensionVersion that matches the supplied extInfo,
      * and returns it if it exists. If it does not exist, it will be created, added to the Extension, and returned.
      */
-    public ExtensionVersion findOrCreateExtensionVersion(Extension extension, AppExtensionInfo extInfo) {
+    public ExtensionVersion findOrCreateExtensionVersion(Extension extension, AppExtensionInfo extInfo, File jarFile) {
         for (ExtensionVersion version : extension.getVersions()) {
             if (version.getExtInfo().getName().equals(extInfo.getName())
                     && version.getExtInfo().getVersion().equals(extInfo.getVersion())) {
@@ -285,7 +286,19 @@ public class ProjectManager {
         log.info("Creating new extension version: " + extInfo.getName() + " version " + extInfo.getVersion());
         VersionManifest.ExtensionVersion extVersion = new VersionManifest.ExtensionVersion();
         extVersion.setExtInfo(extInfo);
-        // TODO set signature and download urls!
+        extVersion.setDownloadPath(jarFile.getName());
+
+        // See if there's a signature file here:
+        String filename = jarFile.getName();
+        if (filename.toLowerCase().endsWith(".jar")) {
+            filename = filename.substring(0, filename.length() - 4);
+        }
+        filename += ".sig";
+        File signatureFile = new File(jarFile.getParentFile(), filename);
+        if (signatureFile.exists()) {
+            extVersion.setSignaturePath(filename);
+        }
+
         extension.addVersion(extVersion);
         return extVersion;
     }
@@ -324,17 +337,31 @@ public class ProjectManager {
             return; // wonky case but this may not be set if the json is invalid
         }
         String jarPath = extensionVersion.getDownloadPath();
+        Files.delete(new File(parentDir, jarPath).toPath());
+        removeAllScreenshots(extensionVersion);
+    }
+
+    /**
+     * Finds and deletes any screenshot images associated with the given ExtensionVersion.
+     */
+    public void removeAllScreenshots(ExtensionVersion extensionVersion) throws IOException {
+        File parentDir = new File(getProject().getExtensionsDir(), extensionVersion.getExtInfo().getTargetAppVersion());
+        if (!parentDir.exists() || !parentDir.isDirectory()) {
+            return;
+        }
+        if (extensionVersion.getDownloadPath() == null) {
+            return; // wonky case but this may not be set if the json is invalid
+        }
+        String jarPath = extensionVersion.getDownloadPath();
         if (jarPath.toLowerCase().endsWith(".jar")) {
             jarPath = jarPath.substring(0, jarPath.length() - 4);
         }
         File[] files = parentDir.listFiles();
         if (files != null) {
             for (File toDelete : files) {
-                // Theoretical problem: extension 1 is "myExtension" and 2 is "myExtensionAgain"
-                //    if you removeExtension("myExtension") we'll delete them both here because
-                //    we're just looking at what the name starts with (they both start with "myExtension").
-                //    With proper extension naming, this isn't an issue, but it could happen...
-                if (toDelete.getName().startsWith(jarPath)) {
+                String fileName = toDelete.getName();
+                // Check if the file name matches the base name followed by an underscore
+                if (fileName.startsWith(jarPath + "_")) {
                     Files.delete(toDelete.toPath());
                 }
             }
@@ -356,14 +383,15 @@ public class ProjectManager {
 
         // Copy the jar itself:
         File targetFile = new File(appVersionDir, jar.getName());
-        Files.copy(jar.toPath(), targetFile.toPath());
+        Files.copy(jar.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
         // Also look for screenshots to import:
         for (File screenshot : findScreenshots(jar)) {
             log.info("Importing extension screenshot: " + screenshot.getName());
             targetFile = new File(appVersionDir, screenshot.getName());
             Files.copy(screenshot.toPath(),
-                       targetFile.toPath()); // TODO I think this is stupid enough to fail if the target exists
+                       targetFile.toPath(),
+                       StandardCopyOption.REPLACE_EXISTING);
             extensionVersion.addScreenshot(targetFile.getName());
         }
     }
@@ -371,15 +399,16 @@ public class ProjectManager {
     /**
      * Returns a list of screenshots associated with the given jar file, if any.
      * Any image file of a supported type (jpg, png, or gif) that is found with the same base
-     * name as the given jar file will be considered a match. For example, given a
+     * name as the given jar file will be considered a match. <b>An underscore must stand between
+     * the base name and the rest of the filename!</b> For example, given a
      * jar file named "myExtension.jar":
      * <ul>
-     *     <li><b>myExtension.jpg</b> would match
-     *     <li><b>myExtension1.jpg</b> would match
+     *     <li><b>myExtension.jpg</b> would NOT match - no underscore
+     *     <li><b>myExtension_1.jpg</b> would match
      *     <li><b>myExtension_superAwesomeScreenshot.jpg</b> would match
-     *     <li><b>MyExtension.jpg</b> would NOT match - wrong case
+     *     <li><b>MyExtension_1.jpg</b> would NOT match - wrong case (My instead of my)
      *     <li><b>myExt1.jpg</b> would NOT match - incomplete base name
-     *     <li><b>myExtension1.tiff</b> would NOT match - unsupported image type
+     *     <li><b>myExtension_1.tiff</b> would NOT match - unsupported image type
      * </ul>
      * <p>
      * If no matching screenshots are found, an empty list is returned.

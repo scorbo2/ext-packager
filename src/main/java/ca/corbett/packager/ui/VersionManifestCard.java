@@ -46,6 +46,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -89,10 +90,12 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         //noinspection unchecked
         extensionListField = (ListField<VersionManifest.Extension>)buildExtensionListField();
         formPanel.add(extensionListField);
+        formPanel.add(buildExtensionButtonPanel());
 
         //noinspection unchecked
         extensionVersionListField = (ListField<VersionManifest.ExtensionVersion>)buildExtensionVersionListField();
         formPanel.add(extensionVersionListField);
+        formPanel.add(buildExtensionVersionButtonPanel());
 
         add(formPanel, BorderLayout.CENTER);
         ProjectManager.getInstance().addProjectListener(this);
@@ -125,8 +128,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                 succeeded++;
             }
             catch (Exception e) {
-                log.warning(e.getMessage());
-                log.log(Level.FINE, "Problem with jar " + candidateJar.getAbsolutePath() + ": " + e.getMessage(), e);
+                log.log(Level.WARNING, "Problem with jar " + candidateJar.getAbsolutePath() + ": " + e.getMessage(), e);
             }
         }
 
@@ -148,6 +150,12 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
      * Deletes the currently selected application version.
      */
     private void deleteApplicationVersion() {
+        int selectedIndex = getSelectedApplicationVersionIndex();
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(MainWindow.getInstance(), "Nothing selected.");
+            return;
+        }
+
         if (JOptionPane.showConfirmDialog(MainWindow.getInstance(),
                                           "Really delete selected application version?",
                                           "Confirm",
@@ -155,14 +163,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             return;
         }
 
-        int[] selectedIndexes = appVersionListField.getSelectedIndexes();
-        if (selectedIndexes.length == 0) {
-            JOptionPane.showMessageDialog(MainWindow.getInstance(), "Nothing selected.");
-            return;
-        }
         DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
-        VersionManifest.ApplicationVersion appVersion = listModel.getElementAt(selectedIndexes[0]);
-        listModel.removeElementAt(selectedIndexes[0]);
+        VersionManifest.ApplicationVersion appVersion = listModel.getElementAt(selectedIndex);
+        listModel.removeElementAt(selectedIndex);
         try {
             ProjectManager.getInstance().removeApplicationVersion(appVersion); // file cleanup
         }
@@ -178,6 +181,14 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
      * Deletes the currently selected extension.
      */
     private void deleteExtension() {
+        int selectedApplicationVersionIndex = getSelectedApplicationVersionIndex();
+        int selectedExtensionIndex = getSelectedExtensionIndex();
+        if (selectedExtensionIndex == -1
+                || selectedApplicationVersionIndex == -1) {
+            JOptionPane.showMessageDialog(MainWindow.getInstance(), "Nothing selected.");
+            return;
+        }
+
         if (JOptionPane.showConfirmDialog(MainWindow.getInstance(),
                                           "Really delete selected extension?",
                                           "Confirm",
@@ -185,14 +196,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             return;
         }
 
-        int[] selectedIndexes = extensionListField.getSelectedIndexes();
-        if (selectedIndexes.length == 0) {
-            JOptionPane.showMessageDialog(MainWindow.getInstance(), "Nothing selected.");
-            return;
-        }
         DefaultListModel<VersionManifest.Extension> listModel = (DefaultListModel<VersionManifest.Extension>)extensionListField.getListModel();
-        VersionManifest.Extension extension = listModel.getElementAt(selectedIndexes[0]);
-        listModel.removeElementAt(selectedIndexes[0]);
+        VersionManifest.Extension extension = listModel.getElementAt(selectedExtensionIndex);
+        listModel.removeElementAt(selectedExtensionIndex);
         try {
             ProjectManager.getInstance().removeExtension(extension); // file cleanup
         }
@@ -201,6 +207,14 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                                    "Not all files associated with this extension could be removed: "
                                            + ioe.getMessage(), ioe);
         }
+
+        // Also remove it from the selected ApplicationVersion / Extension
+        DefaultListModel<VersionManifest.ApplicationVersion> appVersionListModel =
+                (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
+        VersionManifest.ApplicationVersion appVersion = appVersionListModel.getElementAt(
+                selectedApplicationVersionIndex);
+        appVersion.removeExtension(extension);
+
         populateFields(generateVersionManifest());
     }
 
@@ -208,6 +222,16 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
      * Deletes the currently selected extension version.
      */
     private void deleteExtensionVersion() {
+        int selectedExtensionVersionIndex = getSelectedExtensionVersionIndex();
+        int selectedApplicationVersionIndex = getSelectedApplicationVersionIndex();
+        int selectedExtensionIndex = getSelectedExtensionIndex();
+        if (selectedExtensionVersionIndex == -1
+                || selectedApplicationVersionIndex == -1
+                || selectedExtensionIndex == -1) {
+            JOptionPane.showMessageDialog(MainWindow.getInstance(), "Nothing selected.");
+            return;
+        }
+
         if (JOptionPane.showConfirmDialog(MainWindow.getInstance(),
                                           "Really delete selected extension version?",
                                           "Confirm",
@@ -215,15 +239,10 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             return;
         }
 
-        int[] selectedIndexes = extensionVersionListField.getSelectedIndexes();
-        if (selectedIndexes.length == 0) {
-            JOptionPane.showMessageDialog(MainWindow.getInstance(), "Nothing selected.");
-            return;
-        }
         DefaultListModel<VersionManifest.ExtensionVersion> listModel =
                 (DefaultListModel<VersionManifest.ExtensionVersion>)extensionVersionListField.getListModel();
-        VersionManifest.ExtensionVersion extensionVersion = listModel.getElementAt(selectedIndexes[0]);
-        listModel.removeElementAt(selectedIndexes[0]);
+        VersionManifest.ExtensionVersion extensionVersion = listModel.getElementAt(selectedExtensionVersionIndex);
+        listModel.removeElementAt(selectedExtensionVersionIndex);
         try {
             ProjectManager.getInstance().removeExtensionVersion(extensionVersion); // file cleanup
         }
@@ -232,7 +251,30 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
                                    "Not all files associated with this extension version could be removed: "
                                            + ioe.getMessage(), ioe);
         }
+
+        // Also remove it from the selected ApplicationVersion / Extension
+        DefaultListModel<VersionManifest.ApplicationVersion> appVersionListModel =
+                (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
+        VersionManifest.ApplicationVersion appVersion = appVersionListModel.getElementAt(
+                selectedApplicationVersionIndex);
+        appVersion.getExtensions().get(selectedExtensionIndex).removeVersion(extensionVersion);
+
         populateFields(generateVersionManifest());
+    }
+
+    private int getSelectedApplicationVersionIndex() {
+        int[] selectedIndexes = appVersionListField.getSelectedIndexes();
+        return selectedIndexes.length == 0 ? -1 : selectedIndexes[0];
+    }
+
+    private int getSelectedExtensionIndex() {
+        int[] selectedIndexes = extensionListField.getSelectedIndexes();
+        return selectedIndexes.length == 0 ? -1 : selectedIndexes[0];
+    }
+
+    private int getSelectedExtensionVersionIndex() {
+        int[] selectedIndexes = extensionVersionListField.getSelectedIndexes();
+        return selectedIndexes.length == 0 ? -1 : selectedIndexes[0];
     }
 
     /**
@@ -288,7 +330,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             List<VersionManifest.ApplicationVersion> sortedList = versionManifest
                     .getApplicationVersions()
                     .stream()
-                    .sorted((a, b) -> a.getVersion().compareTo(b.getVersion()))
+                    .sorted(Comparator.comparing(VersionManifest.ApplicationVersion::getVersion))
                     .toList();
             for (VersionManifest.ApplicationVersion version : sortedList) {
                 addApplicationVersion(version);
@@ -373,6 +415,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         VersionManifest.ExtensionVersion extensionVersion = extensionVersionListModel.getElementAt(selectedIndexes[0]);
         ExtensionVersionDialog dialog = new ExtensionVersionDialog(extensionVersion);
         dialog.setVisible(true);
+        if (dialog.wasOkayed()) {
+            saveChanges();
+        }
     }
 
     /**
@@ -381,6 +426,8 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     private ListField<VersionManifest.ApplicationVersion> buildAppVersionListField() {
         ListField<VersionManifest.ApplicationVersion> listField;
         listField = new ListField<>("Versions:", List.of());
+        listField.getMargins().setTop(12);
+        listField.getMargins().setBottom(0);
         listField.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listField.setShouldExpand(true);
         listField.setCellRenderer(new AppVersionListCellRenderer());
@@ -400,6 +447,9 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
 
     private PanelField buildAppVersionButtonPanel() {
         PanelField buttonPanel = new PanelField(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.getMargins().setTop(2);
+        buttonPanel.getMargins().setBottom(12);
+
         JButton button = new JButton("Import");
         button.addActionListener(e -> importExtensions());
         button.setPreferredSize(new Dimension(70, 24));
@@ -420,6 +470,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     private ListField<?> buildExtensionListField() {
         ListField<VersionManifest.Extension> listField;
         listField = new ListField<>("Extensions:", List.of());
+        listField.getMargins().setBottom(0);
         listField.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listField.setShouldExpand(true);
         listField.setCellRenderer(new ExtensionListCellRenderer());
@@ -437,12 +488,27 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         return listField;
     }
 
+    private PanelField buildExtensionButtonPanel() {
+        PanelField buttonPanel = new PanelField(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.getMargins().setTop(2);
+        buttonPanel.getMargins().setBottom(12);
+
+        JButton button = new JButton("Delete");
+        button.addActionListener(e -> deleteExtension());
+        button.setPreferredSize(new Dimension(70, 24));
+        buttonPanel.getPanel().add(button);
+        buttonPanel.getMargins().setLeft(128);
+
+        return buttonPanel;
+    }
+
     /**
      * Builds and returns the ExtensionVersion list field.
      */
     private ListField<?> buildExtensionVersionListField() {
         ListField<VersionManifest.ExtensionVersion> listField;
         listField = new ListField<>("Extension versions:", List.of());
+        listField.getMargins().setBottom(0);
         listField.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listField.setShouldExpand(true);
         listField.setCellRenderer(new ExtensionVersionListCellRenderer());
@@ -466,6 +532,26 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
 
         return listField;
     }
+
+    private PanelField buildExtensionVersionButtonPanel() {
+        PanelField buttonPanel = new PanelField(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.getMargins().setTop(2);
+        buttonPanel.getMargins().setBottom(12);
+
+        JButton button = new JButton("Edit");
+        button.addActionListener(e -> editSelectedExtensionVersion());
+        button.setPreferredSize(new Dimension(70, 24));
+        buttonPanel.getPanel().add(button);
+
+        button = new JButton("Delete");
+        button.addActionListener(e -> deleteExtensionVersion());
+        button.setPreferredSize(new Dimension(70, 24));
+        buttonPanel.getPanel().add(button);
+        buttonPanel.getMargins().setLeft(128);
+
+        return buttonPanel;
+    }
+
 
     private MessageUtil getMessageUtil() {
         if (messageUtil == null) {

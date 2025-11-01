@@ -40,6 +40,8 @@ public class ExtensionVersionDialog extends JDialog {
     private MessageUtil messageUtil;
     private boolean wasOkayed;
     private final VersionManifest.ExtensionVersion extensionVersion;
+    private boolean screenshotsModified = false;
+    private ImageListField screenshotsField;
 
     public ExtensionVersionDialog(VersionManifest.ExtensionVersion version) {
         super(MainWindow.getInstance(), "Extension version: "
@@ -115,7 +117,7 @@ public class ExtensionVersionDialog extends JDialog {
             formPanel.add(labelField);
         }
 
-        ImageListField screenshotsField = new ImageListField("Screenshots:", 1);
+        screenshotsField = new ImageListField("Screenshots:", 1);
         screenshotsField.setShouldExpand(true);
         //screenshotsField.getImageListPanel().setOwnerFrame(this); // TODO Needs swing-extras #159
         for (String screenshotPath : extensionVersion.getScreenshots()) {
@@ -130,6 +132,7 @@ public class ExtensionVersionDialog extends JDialog {
                 getMessageUtil().error("Error loading screenshot "+screenshotPath+": "+ioe.getMessage(), ioe);
             }
         }
+        screenshotsField.addValueChangedListener(field -> screenshotsModified = true);
         formPanel.add(screenshotsField);
 
     	return formPanel;
@@ -156,11 +159,30 @@ public class ExtensionVersionDialog extends JDialog {
 //    		return;
 //    	}
 
-        // TODO Update extension version with screenshots from our component... or add a listener to it to do that
-        //      If new images were added, we have to add them to the right directory with the right naming scheme :(
-        //      If images were removed, we need to delete them from the dist directory
-        //      How tf do we tell which images are which, if some were added and others removed?
-        //      Just nuke and rebuild on every image list panel change I guess...
+        // If any screenshot was added or removed, nuke the entire existing list and rebuild it
+        // from our ImageListField. This is not terribly surgical but there's currently no way of knowing
+        // which images map to which existing file(s) after a modification is made, so...
+        if (screenshotsModified) {
+            try {
+                ProjectManager.getInstance().removeAllScreenshots(extensionVersion);
+                extensionVersion.clearScreenshots();
+                for (int i = 0; i < screenshotsField.getImageCount(); i++) {
+                    String jarPath = extensionVersion.getDownloadPath();
+                    if (jarPath.toLowerCase().endsWith(".jar")) {
+                        jarPath = jarPath.substring(0, jarPath.length() - 4);
+                    }
+                    File screenshotFile = ProjectManager.getInstance()
+                                                        .getProjectFileFromPath(
+                                                                extensionVersion,
+                                                                jarPath + "_screenshot" + (i + 1) + ".jpg");
+                    ImageUtil.saveImage(screenshotsField.getImageListPanel().getImageAt(i), screenshotFile);
+                    extensionVersion.addScreenshot(screenshotFile.getName());
+                }
+            }
+            catch (IOException ioe) {
+                getMessageUtil().error("Error updating screenshots: " + ioe.getMessage(), ioe);
+            }
+        }
 
     	this.wasOkayed = okay;
     	dispose();
