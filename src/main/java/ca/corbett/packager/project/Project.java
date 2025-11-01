@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -142,6 +144,22 @@ public class Project {
     public void setKeyPair(KeyPair keyPair) throws IOException {
         this.privateKey = keyPair.getPrivate();
         this.publicKey = keyPair.getPublic();
+        if (publicKey != null) {
+            UpdateSources newUpdateSources = new UpdateSources(updateSources.getApplicationName());
+            List<UpdateSources.UpdateSource> newEntries = new ArrayList<>();
+            for (UpdateSources.UpdateSource updateSource : updateSources.getUpdateSources()) {
+                UpdateSources.UpdateSource newEntry = new UpdateSources.UpdateSource(
+                        updateSource.getName(),
+                        updateSource.getBaseUrl(),
+                        updateSource.getVersionManifestRelativePath(),
+                        "public.key"); // TODO hard-coding this filename everywhere
+                newEntries.add(newEntry);
+            }
+            for (UpdateSources.UpdateSource source : newEntries) {
+                newUpdateSources.addUpdateSource(source);
+            }
+            updateSources = newUpdateSources;
+        }
     }
 
     /**
