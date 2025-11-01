@@ -57,7 +57,7 @@ public class UpdateSourceDialog extends JDialog {
         String name = nameField.getText();
         URL baseUrl = null;
         String manifest = "version_manifest.json"; // TODO maybe make this configurable?
-        String publicKey = publicKeyField.getText().isBlank() ? null : publicKeyField.getText();
+        String publicKey = publicKeyField.getText().isBlank() ? null : "public.key"; // TODO configurable?
         try {
             baseUrl = new URL(baseUrlField.getText());
         }
