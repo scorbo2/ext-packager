@@ -289,14 +289,9 @@ public class ProjectManager {
         extVersion.setDownloadPath(jarFile.getName());
 
         // See if there's a signature file here:
-        String filename = jarFile.getName();
-        if (filename.toLowerCase().endsWith(".jar")) {
-            filename = filename.substring(0, filename.length() - 4);
-        }
-        filename += ".sig";
-        File signatureFile = new File(jarFile.getParentFile(), filename);
+        File signatureFile = new File(jarFile.getParentFile(), getBasename(jarFile.getName()) + ".sig");
         if (signatureFile.exists()) {
-            extVersion.setSignaturePath(filename);
+            extVersion.setSignaturePath(signatureFile.getName());
         }
 
         extension.addVersion(extVersion);
@@ -338,10 +333,7 @@ public class ProjectManager {
         }
         String jarPath = extensionVersion.getDownloadPath();
         Files.delete(new File(parentDir, jarPath).toPath());
-        if (jarPath.toLowerCase().endsWith(".jar")) {
-            jarPath = jarPath.substring(0, jarPath.length() - 4);
-        }
-        File signatureFile = new File(parentDir, jarPath + ".sig");
+        File signatureFile = new File(parentDir, getBasename(jarPath) + ".sig");
         if (signatureFile.exists()) {
             Files.delete(signatureFile.toPath());
         }
@@ -359,16 +351,13 @@ public class ProjectManager {
         if (extensionVersion.getDownloadPath() == null) {
             return; // wonky case but this may not be set if the json is invalid
         }
-        String jarPath = extensionVersion.getDownloadPath();
-        if (jarPath.toLowerCase().endsWith(".jar")) {
-            jarPath = jarPath.substring(0, jarPath.length() - 4);
-        }
+        String basename = getBasename(extensionVersion.getDownloadPath());
         File[] files = parentDir.listFiles();
         if (files != null) {
             for (File toDelete : files) {
                 String fileName = toDelete.getName();
                 // Check if the file name matches the base name followed by an underscore
-                if (fileName.startsWith(jarPath + "_")) {
+                if (fileName.startsWith(basename + "_")) {
                     Files.delete(toDelete.toPath());
                 }
             }
@@ -430,13 +419,9 @@ public class ProjectManager {
             return List.of();
         }
 
-        String basename = jarFile.getName();
-        if (basename.toLowerCase().endsWith(".jar")) {
-            basename = basename.substring(0, basename.lastIndexOf(".jar"));
-        }
-        final String basenameFinal = basename;
+        final String basename = getBasename(jarFile.getName());
         return Arrays.stream(files)
-                     .filter(f -> f.getName().startsWith(basenameFinal) && isImageFile(f))
+                     .filter(f -> f.getName().startsWith(basename) && isImageFile(f))
                      .toList();
     }
 
@@ -490,6 +475,20 @@ public class ProjectManager {
                 ? project.getDistDir()
                 : new File(project.getDistDir(), "extensions/" + extensionVersion.getExtInfo().getTargetAppVersion());
         return new File(containingDir, path);
+    }
+
+    /**
+     * Returns the given filename without its extension (if it has an extension, otherwise as-is).
+     */
+    public static String getBasename(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return filename;
+        }
+        int index = filename.lastIndexOf(".");
+        if (index == -1) {
+            return filename;
+        }
+        return filename.substring(0, index);
     }
 
     private boolean isImageFile(File f) {

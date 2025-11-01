@@ -14,6 +14,7 @@ import java.util.Comparator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class ProjectManagerTest {
 
@@ -61,6 +62,16 @@ class ProjectManagerTest {
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }
 
+    @Test
+    public void getBasename_returnsFilenameWithoutExtension() {
+        assertEquals("hello", ProjectManager.getBasename("hello.txt"));
+        assertEquals("hello.txt", ProjectManager.getBasename("hello.txt.txt"));
+        assertEquals("hello", ProjectManager.getBasename("hello"));
+        assertNull(ProjectManager.getBasename(null));
+        assertEquals("  ", ProjectManager.getBasename("  "));
+        assertEquals("path/to/hello", ProjectManager.getBasename("path/to/hello.txt"));
+    }
+
     private static void deleteDirectoryRecursively(File rootDir) throws IOException {
         Path path = rootDir.toPath();
         if (Files.exists(path)) {
@@ -76,5 +87,4 @@ class ProjectManagerTest {
                  });
         }
     }
-
 }
