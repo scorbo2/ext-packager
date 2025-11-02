@@ -1,7 +1,7 @@
 ExtPackager Release Notes
 Author: Steve Corbett
 
-Version 1.0 [TODO] - Initial release
+Version 1.0 [2025-11-02] - Initial release
   #1 - Key pair generation
   #2 - Update sources generation
   #3 - Version manifest generation
