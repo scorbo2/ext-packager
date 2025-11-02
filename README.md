@@ -65,4 +65,6 @@ ext-packager is made available under the MIT license: https://opensource.org/lic
 
 ## Revision history
 
-TODO work in progress 2025-10-13
+2025-11-02: Initial release.
+
+[Full release notes and version history](src/main/resources/ca/corbett/extpackager/ReleaseNotes.txt)
