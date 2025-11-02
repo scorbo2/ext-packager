@@ -1,4 +1,17 @@
 ExtPackager Release Notes
 Author: Steve Corbett
 
-Version 1.0 [TODO] - Initial release
+Version 1.0 [2025-11-02] - Initial release
+  #1 - Key pair generation
+  #2 - Update sources generation
+  #3 - Version manifest generation
+  #4 - Extension jar signing
+  #5 - FTP upload
+  #7 - Project creation and selection
+  #9 - Keypair regeneration should warn if exists
+  #10 - Extension jar signature verification
+  #12 - Set manifestGeneratedOn when uploading
+  #13 - Local filesystem deploy
+  #14 - Batch extension import
+  #16 - Add hyperlinks to generated json on project card
+  

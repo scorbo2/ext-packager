@@ -7,9 +7,6 @@ import java.io.File;
 /**
  * Constants concerning the application name and version information,
  * along with properties describing the location of the application config dir.
- *
- * @author scorbo2
- * @since 2017-11-28
  */
 public final class Version {
 
@@ -67,7 +64,7 @@ public final class Version {
     public static final File APP_CONFIG_FILE;
 
     /** The project Url. **/
-    public static String PROJECT_URL = "https://github.com/scorbo2/ext-package";
+    public static String PROJECT_URL = "https://github.com/scorbo2/ext-packager";
 
     /** The project license. **/
     public static String LICENSE = "https://opensource.org/license/mit";
@@ -83,6 +80,7 @@ public final class Version {
         aboutInfo.releaseNotesLocation = "/ca/corbett/extpackager/ReleaseNotes.txt";
         aboutInfo.logoImageLocation = "/ca/corbett/extpackager/images/logo_wide.jpg";
         aboutInfo.shortDescription = "Packages source and update json for application extensions.";
+        aboutInfo.logoDisplayMode = AboutInfo.LogoDisplayMode.AS_IS;
 
         String installDir = System.getProperty("INSTALL_DIR", null);
         INSTALL_DIR = installDir == null ? null : new File(installDir);
