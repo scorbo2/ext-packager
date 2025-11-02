@@ -50,6 +50,7 @@ public class ExtensionVersionDialog extends JDialog {
                 + version.getExtInfo().getVersion(), true);
         this.extensionVersion = version;
         setSize(new Dimension(new Dimension(575, 510)));
+        setMinimumSize(new Dimension(400, 400));
         setResizable(true);
         setLocationRelativeTo(MainWindow.getInstance());
         setLayout(new BorderLayout());
