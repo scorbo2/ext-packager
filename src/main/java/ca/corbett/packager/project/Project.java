@@ -219,6 +219,14 @@ public class Project {
         if (updateSources != null) {
             FileSystemUtil.writeStringToFile(gson.toJson(updateSources), getUpdateSourcesFile());
         }
+        saveVersionManifest();
+    }
+
+    /**
+     * Saves just the VersionManifest for this project. This is exposed separately so it can
+     * be invoked outside of save().
+     */
+    public void saveVersionManifest() throws IOException {
         if (versionManifest != null) {
             FileSystemUtil.writeStringToFile(gson.toJson(versionManifest), getVersionManifestFile());
         }

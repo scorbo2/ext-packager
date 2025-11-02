@@ -1,26 +1,37 @@
 package ca.corbett.packager.ui;
 
 import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.progress.MultiProgressDialog;
+import ca.corbett.extras.progress.SimpleProgressAdapter;
+import ca.corbett.extras.properties.Properties;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
+import ca.corbett.forms.fields.CheckBoxField;
 import ca.corbett.forms.fields.ComboField;
 import ca.corbett.forms.fields.FormField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.PanelField;
+import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.forms.validators.FieldValidator;
 import ca.corbett.forms.validators.ValidationResult;
+import ca.corbett.packager.AppConfig;
+import ca.corbett.packager.io.FileSystemUploadThread;
+import ca.corbett.packager.io.FtpParams;
+import ca.corbett.packager.io.FtpUploadThread;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
 import ca.corbett.updates.UpdateSources;
 
 import javax.swing.JButton;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.io.File;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -41,6 +52,12 @@ public class UploadCard extends JPanel implements ProjectListener {
     private final CheckValidator jarsPresentValidator;
     private final CheckValidator jarsSignedValidator;
     private final ComboField<String> sourceCombo;
+    private final LabelField targetDirField;
+    private final ShortTextField ftpHostField;
+    private final ShortTextField ftpUsernameField;
+    private final ShortTextField ftpPasswordField;
+    private final ShortTextField ftpTargetDirField;
+    private final CheckBoxField ftpSaveParamsCheckbox;
 
     public UploadCard() {
         setLayout(new BorderLayout());
@@ -64,7 +81,39 @@ public class UploadCard extends JPanel implements ProjectListener {
 
         sourceCombo = new ComboField<>("Upload to:");
         sourceCombo.getMargins().setTop(24);
+        sourceCombo.addValueChangedListener(field -> comboValueChanged());
         formPanel.add(sourceCombo);
+
+        // Controls specific to file-based upload sources:
+        targetDirField = new LabelField("Target dir:", "");
+        targetDirField.setVisible(false);
+        formPanel.add(targetDirField);
+
+        // Controls specific to ftp-based upload sources:
+        Properties props = AppConfig.getInstance().getPropertiesManager().getPropertiesInstance();
+        ftpHostField = new ShortTextField("Host:", 15);
+        ftpHostField.setVisible(false);
+        ftpHostField.setAllowBlank(false);
+        ftpHostField.setText(props.getString("ftpHost", ""));
+        ftpUsernameField = new ShortTextField("Username:", 15);
+        ftpUsernameField.setVisible(false);
+        ftpUsernameField.setAllowBlank(false);
+        ftpUsernameField.setText(props.getString("ftpUser", ""));
+        ftpPasswordField = new ShortTextField("Password:", 15);
+        ftpPasswordField.setVisible(false);
+        ftpPasswordField.setAllowBlank(false);
+        ftpTargetDirField = new ShortTextField("Target dir:", 15);
+        ftpTargetDirField.setVisible(false);
+        ftpTargetDirField.setAllowBlank(false);
+        ftpTargetDirField.setText(props.getString("ftpDir", ""));
+        ftpSaveParamsCheckbox = new CheckBoxField("Save FTP parameters", true);
+        ftpSaveParamsCheckbox.setVisible(false);
+        formPanel.add(ftpHostField);
+        formPanel.add(ftpUsernameField);
+        formPanel.add(ftpPasswordField);
+        formPanel.add(ftpTargetDirField);
+        formPanel.add(ftpSaveParamsCheckbox);
+
 
         PanelField panelField = new PanelField(new FlowLayout(FlowLayout.LEFT));
         JButton button = new JButton("Upload");
@@ -76,6 +125,45 @@ public class UploadCard extends JPanel implements ProjectListener {
         add(formPanel, BorderLayout.CENTER);
 
         ProjectManager.getInstance().addProjectListener(this);
+    }
+
+    private void comboValueChanged() {
+        setFileUploadControlsVisible(false);
+        setFtpUploadControlsVisible(false);
+
+        Project project = ProjectManager.getInstance().getProject();
+        int selectedIndex = sourceCombo.getSelectedIndex();
+        if (project == null || selectedIndex == -1) {
+            return;
+        }
+
+        UpdateSources.UpdateSource updateSource = project.getUpdateSources().getUpdateSources().get(selectedIndex);
+        if (updateSource.getBaseUrl().getProtocol().equalsIgnoreCase("file")) {
+            setFileUploadControlsVisible(true);
+            try {
+                targetDirField.setText(new File(updateSource.getBaseUrl().toURI()).getAbsolutePath());
+            }
+            catch (URISyntaxException | IllegalArgumentException e) {
+                targetDirField.setText("(invalid base URL)");
+            }
+        }
+        else {
+            setFtpUploadControlsVisible(true);
+        }
+
+        formPanel.validateForm(); // revalidate form as visible controls may have changed.
+    }
+
+    private void setFileUploadControlsVisible(boolean visible) {
+        targetDirField.setVisible(visible);
+    }
+
+    private void setFtpUploadControlsVisible(boolean visible) {
+        ftpHostField.setVisible(visible);
+        ftpUsernameField.setVisible(visible);
+        ftpPasswordField.setVisible(visible);
+        ftpTargetDirField.setVisible(visible);
+        ftpSaveParamsCheckbox.setVisible(visible);
     }
 
     private void doUpload() {
@@ -92,8 +180,48 @@ public class UploadCard extends JPanel implements ProjectListener {
             return;
         }
 
+        // Some warnings, like the project not having a key pair or not all jars being signed,
+        // might be intentional and are not necessarily fatal. Still, give user a chance to think it over:
+        if (!formPanel.isFormValid()) {
+            if (JOptionPane.showConfirmDialog(MainWindow.getInstance(),
+                                              "Proceed despite warnings?",
+                                              "Confirm",
+                                              JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) {
+                return;
+            }
+        }
+
         UpdateSources.UpdateSource updateSource = updateSources.get(sourceCombo.getSelectedIndex());
-        // TODO hand this updateSource to an UploadDialog and go...
+        if (updateSource.getBaseUrl().getProtocol().equalsIgnoreCase("file")) {
+            FileSystemUploadThread worker = new FileSystemUploadThread(project, new File(targetDirField.getText()));
+            worker.addProgressListener(new UploadProgressListener());
+            new MultiProgressDialog(MainWindow.getInstance(), "Filesystem upload")
+                    .runWorker(worker, true);
+        }
+        else {
+            FtpUploadThread worker = new FtpUploadThread(project, updateSource, buildFtpParams());
+            worker.addProgressListener(new UploadProgressListener());
+            new MultiProgressDialog(MainWindow.getInstance(), "FTP upload")
+                    .runWorker(worker, true);
+        }
+    }
+
+    private FtpParams buildFtpParams() {
+        FtpParams params = new FtpParams();
+        params.host = ftpHostField.getText();
+        params.username = ftpUsernameField.getText();
+        params.targetDir = ftpTargetDirField.getText();
+        params.password = ftpPasswordField.getText();
+
+        // Save all ftp props if directed, or blank them out otherwise:
+        // (note we deliberately don't save the password here, bit of a security leak)
+        Properties props = AppConfig.getInstance().getPropertiesManager().getPropertiesInstance();
+        props.setString("ftpHost", ftpSaveParamsCheckbox.isChecked() ? ftpHostField.getText() : "");
+        props.setString("ftpUser", ftpSaveParamsCheckbox.isChecked() ? ftpUsernameField.getText() : "");
+        props.setString("ftpDir", ftpSaveParamsCheckbox.isChecked() ? ftpTargetDirField.getText() : "");
+        AppConfig.getInstance().save();
+
+        return params;
     }
 
     private void validateForm() {
@@ -178,5 +306,18 @@ public class UploadCard extends JPanel implements ProjectListener {
             messageUtil = new MessageUtil(MainWindow.getInstance(), log);
         }
         return messageUtil;
+    }
+
+    private class UploadProgressListener extends SimpleProgressAdapter {
+        @Override
+        public boolean progressError(String errorSource, String errorDetails) {
+            getMessageUtil().error(errorSource, errorDetails);
+            return false;
+        }
+
+        @Override
+        public void progressComplete() {
+            getMessageUtil().info("Upload complete!");
+        }
     }
 }
