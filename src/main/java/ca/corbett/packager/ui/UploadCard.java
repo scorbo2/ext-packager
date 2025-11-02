@@ -252,8 +252,15 @@ public class UploadCard extends JPanel implements ProjectListener {
             jarsPresentValidator.setMessage("Project contains no extension jars.");
         }
         List<File> sigFiles = ProjectManager.getInstance().findAllSignatures(project);
-        if (sigFiles.isEmpty() || sigFiles.size() != jarFiles.size()) {
-            jarsSignedValidator.setMessage("Not all jars have been signed.");
+        if (sigFiles.isEmpty()) {
+            jarsSignedValidator.setMessage("No jar signatures detected.");
+        }
+        else if (sigFiles.size() != jarFiles.size()) {
+            jarsSignedValidator.setMessage(
+                    "Only " + sigFiles.size() + " jars of " + jarFiles.size() + " have been signed.");
+        }
+        else {
+            jarsSignedValidator.setMessage(null);
         }
         formPanel.validateForm();
     }
