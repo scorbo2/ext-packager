@@ -16,6 +16,7 @@ import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
 import ca.corbett.packager.ui.dialogs.ExtensionVersionDialog;
 import ca.corbett.updates.VersionManifest;
+import ca.corbett.updates.VersionStringComparator;
 
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
@@ -287,7 +288,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         for (int i = 0; i < listModel.size(); i++) {
             manifest.addApplicationVersion(listModel.getElementAt(i));
         }
-        //manifest.setManifestGenerated(); // TODO do we set this each time? or once on upload?
+        //manifest.setManifestGenerated(); // Don't set this here... it will get set when uploading.
         return manifest;
     }
 
@@ -380,8 +381,18 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         DefaultListModel<VersionManifest.ApplicationVersion> appVersionListModel =
                 (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
         VersionManifest.ApplicationVersion appVersion = appVersionListModel.getElementAt(selectedIndexes[0]);
-        for (VersionManifest.Extension extension : appVersion.getExtensions()) {
-            extensionListModel.addElement(extension); // TODO sort maybe?
+        List<VersionManifest.Extension> extensions = appVersion.getExtensions();
+        extensions.sort(new Comparator<VersionManifest.Extension>() {
+            @Override
+            public int compare(VersionManifest.Extension o1, VersionManifest.Extension o2) {
+                if (o1.getName() == null || o2.getName() == null) {
+                    return 0;
+                }
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
+        for (VersionManifest.Extension extension : extensions) {
+            extensionListModel.addElement(extension);
         }
     }
 
@@ -398,8 +409,20 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         DefaultListModel<VersionManifest.Extension> extensionListModel =
                 (DefaultListModel<VersionManifest.Extension>)extensionListField.getListModel();
         VersionManifest.Extension extension = extensionListModel.getElementAt(selectedIndexes[0]);
-        for (VersionManifest.ExtensionVersion extensionVersion : extension.getVersions()) {
-            extensionVersionListModel.addElement(extensionVersion); // TODO sort maybe?
+        List<VersionManifest.ExtensionVersion> extensionVersions = extension.getVersions();
+        extensionVersions.sort(new Comparator<VersionManifest.ExtensionVersion>() {
+            @Override
+            public int compare(VersionManifest.ExtensionVersion o1, VersionManifest.ExtensionVersion o2) {
+                if (o1 == null || o2 == null || o1.getExtInfo() == null || o2.getExtInfo() == null) {
+                    return 0;
+                }
+                String v1 = VersionStringComparator.convertVersionToSafeCompareString(o1.getExtInfo().getVersion());
+                String v2 = VersionStringComparator.convertVersionToSafeCompareString(o2.getExtInfo().getVersion());
+                return v1.compareTo(v2);
+            }
+        });
+        for (VersionManifest.ExtensionVersion extensionVersion : extensionVersions) {
+            extensionVersionListModel.addElement(extensionVersion);
         }
     }
 
