@@ -491,6 +491,14 @@ public class ProjectManager {
         return filename.substring(0, index);
     }
 
+    public List<File> findAllJars(Project project) {
+        return project == null ? List.of() : FileSystemUtil.findFiles(project.getDistDir(), true, "jar");
+    }
+
+    public List<File> findAllSignatures(Project project) {
+        return project == null ? List.of() : FileSystemUtil.findFiles(project.getDistDir(), true, "sig");
+    }
+
     private boolean isImageFile(File f) {
         String name = f.getName().toLowerCase();
         return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith("gif");

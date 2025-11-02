@@ -2,7 +2,6 @@ package ca.corbett.packager.ui;
 
 import ca.corbett.extras.MessageUtil;
 import ca.corbett.extras.crypt.SignatureUtil;
-import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
@@ -67,7 +66,7 @@ public class JarSigningCard extends JPanel implements ProjectListener {
             return;
         }
 
-        List<File> jarFiles = findAllJars(project);
+        List<File> jarFiles = ProjectManager.getInstance().findAllJars(project);
         if (jarFiles.isEmpty()) {
             getMessageUtil().info("This project has no extension jars.");
             return;
@@ -120,7 +119,7 @@ public class JarSigningCard extends JPanel implements ProjectListener {
             return;
         }
 
-        List<File> jarFiles = findAllJars(project);
+        List<File> jarFiles = ProjectManager.getInstance().findAllJars(project);
         if (jarFiles.isEmpty()) {
             getMessageUtil().info("This project has no extension jars.");
             return;
@@ -269,10 +268,6 @@ public class JarSigningCard extends JPanel implements ProjectListener {
         return panelField;
     }
 
-    private List<File> findAllJars(Project project) {
-        return project == null ? List.of() : FileSystemUtil.findFiles(project.getDistDir(), true, "jar");
-    }
-
     private void reset() {
         statusLabel.setText("Not yet scanned.");
 
@@ -281,7 +276,7 @@ public class JarSigningCard extends JPanel implements ProjectListener {
             return;
         }
 
-        List<File> jarFiles = findAllJars(project);
+        List<File> jarFiles = ProjectManager.getInstance().findAllJars(project);
         List<File> sigFiles = new ArrayList<>();
         for (File f : jarFiles) {
             String basename = ProjectManager.getBasename(f.getName());
