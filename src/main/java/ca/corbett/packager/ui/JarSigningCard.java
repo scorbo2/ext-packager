@@ -94,6 +94,10 @@ public class JarSigningCard extends JPanel implements ProjectListener {
             getMessageUtil().info("No jars in this project are signed.");
             return;
         }
+        if (jarFiles.size() > countSigned) {
+            getMessageUtil().info("Some jars in this project are not signed.");
+            return;
+        }
         if (countSigned == countVerified) {
             getMessageUtil().info("All jars signed and verified!");
             return;
