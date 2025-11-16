@@ -14,6 +14,7 @@ import ca.corbett.updates.VersionManifest;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
@@ -21,6 +22,7 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -120,7 +122,7 @@ public class ExtensionVersionDialog extends JDialog {
 
         screenshotsField = new ImageListField("Screenshots:", 1);
         screenshotsField.setShouldExpand(true);
-        //screenshotsField.getImageListPanel().setOwnerFrame(this); // TODO Needs swing-extras #159
+        screenshotsField.getImageListPanel().setOwnerWindow(this);
         for (String screenshotPath : extensionVersion.getScreenshots()) {
             try {
                 File screenshotFile = ProjectManager.getInstance().getProjectFileFromPath(extensionVersion, screenshotPath);
@@ -173,7 +175,12 @@ public class ExtensionVersionDialog extends JDialog {
                                                         .getProjectFileFromPath(
                                                                 extensionVersion,
                                                                 basename + "_screenshot" + (i + 1) + ".jpg");
-                    ImageUtil.saveImage(screenshotsField.getImageListPanel().getImageAt(i), screenshotFile);
+                    Object rawImage = screenshotsField.getImageListPanel().getImageAt(i);
+                    if (rawImage instanceof ImageIcon) {
+                        log.warning("Animated GIF screenshots are not supported - skipping.");
+                        continue;
+                    }
+                    ImageUtil.saveImage((BufferedImage)rawImage, screenshotFile);
                     extensionVersion.addScreenshot(screenshotFile.getName());
                 }
             }

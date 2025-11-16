@@ -19,7 +19,7 @@ public final class Version {
     public static final int VERSION_MAJOR = 1;
 
     /** The minor (patch) version. **/
-    public static final int VERSION_MINOR = 0;
+    public static final int VERSION_MINOR = 1;
 
     /** A user-friendly version string in the form "MAJOR.MINOR" (example: "1.0"). **/
     public static final String VERSION = VERSION_MAJOR + "." + VERSION_MINOR;
