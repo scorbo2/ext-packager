@@ -225,9 +225,10 @@ public class ProjectManager {
     public ExtensionVersion importExtensionJar(VersionManifest versionManifest, File extensionJar) throws Exception {
         AppExtensionInfo extInfo = getExtInfoFromJar(extensionJar, versionManifest.getApplicationName());
         ApplicationVersion appVersion = findOrCreateApplicationVersion(versionManifest, extInfo.getTargetAppVersion());
+        String appVer = appVersion.getVersion();
         Extension extension = findOrCreateExtension(appVersion, extInfo.getName());
-        ExtensionVersion extensionVersion = findOrCreateExtensionVersion(extension, extInfo, extensionJar);
-        copyJarToProjectDirectory(extensionVersion, extensionJar, appVersion.getVersion());
+        ExtensionVersion extensionVersion = findOrCreateExtensionVersion(extension, extInfo, extensionJar, appVer);
+        copyJarToProjectDirectory(extensionVersion, extensionJar, appVer);
         return extensionVersion;
     }
 
@@ -273,7 +274,7 @@ public class ProjectManager {
      * Searches the given Extension for an ExtensionVersion that matches the supplied extInfo,
      * and returns it if it exists. If it does not exist, it will be created, added to the Extension, and returned.
      */
-    public ExtensionVersion findOrCreateExtensionVersion(Extension extension, AppExtensionInfo extInfo, File jarFile) {
+    public ExtensionVersion findOrCreateExtensionVersion(Extension extension, AppExtensionInfo extInfo, File jarFile, String appVersion) {
         for (ExtensionVersion version : extension.getVersions()) {
             if (version.getExtInfo().getName().equals(extInfo.getName())
                     && version.getExtInfo().getVersion().equals(extInfo.getVersion())) {
@@ -282,16 +283,20 @@ public class ProjectManager {
             }
         }
 
+        // Get base path:
+        String basePath = ProjectManager.getInstance().getProject().getExtensionsDir()
+                                        .getName() + "/" + appVersion + "/";
+
         // Extension version doesn't exist, create it
         log.info("Creating new extension version: " + extInfo.getName() + " version " + extInfo.getVersion());
         VersionManifest.ExtensionVersion extVersion = new VersionManifest.ExtensionVersion();
         extVersion.setExtInfo(extInfo);
-        extVersion.setDownloadPath(jarFile.getName());
+        extVersion.setDownloadPath(basePath + jarFile.getName());
 
         // See if there's a signature file here:
         File signatureFile = new File(jarFile.getParentFile(), getBasename(jarFile.getName()) + ".sig");
         if (signatureFile.exists()) {
-            extVersion.setSignaturePath(signatureFile.getName());
+            extVersion.setSignaturePath(basePath + signatureFile.getName());
         }
 
         extension.addVersion(extVersion);
@@ -376,6 +381,9 @@ public class ProjectManager {
         if (!appVersionDir.exists()) {
             appVersionDir.mkdirs();
         }
+        // Get base path:
+        String basePath = ProjectManager.getInstance().getProject().getExtensionsDir()
+                                        .getName() + "/" + appVersion + "/";
 
         // Copy the jar itself:
         File targetFile = new File(appVersionDir, jar.getName());
@@ -388,7 +396,7 @@ public class ProjectManager {
             Files.copy(screenshot.toPath(),
                        targetFile.toPath(),
                        StandardCopyOption.REPLACE_EXISTING);
-            extensionVersion.addScreenshot(targetFile.getName());
+            extensionVersion.addScreenshot(basePath + targetFile.getName());
         }
     }
 
