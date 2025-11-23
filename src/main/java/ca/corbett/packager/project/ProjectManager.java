@@ -452,7 +452,7 @@ public class ProjectManager {
      * <pre>getProjectFileFromPath("public.key"); // returns /home/you/yourProjectDir/public.key</pre>
      */
     public File getProjectFileFromPath(String path) {
-        return getProjectFileFromPath(null, path);
+        return new File(project.getDistDir(), path);
     }
 
     /**
@@ -478,15 +478,22 @@ public class ProjectManager {
      * // (we infer the directory structure based on the target app version of the extension)
      * </PRE>
      */
-    public File getProjectFileFromPath(ExtensionVersion extensionVersion, String path) {
-        File containingDir = extensionVersion == null
+    public File computeExtensionFilePath(ExtensionVersion extensionVersion, String path) {
+        if (extensionVersion == null) {
+            return new File(project.getDistDir(), path);
+        }
+
+        String subpath = "extensions/" + extensionVersion.getExtInfo().getTargetAppVersion();
+        File parentDir = path.contains(subpath)
                 ? project.getDistDir()
-                : new File(project.getDistDir(), "extensions/" + extensionVersion.getExtInfo().getTargetAppVersion());
-        return new File(containingDir, path);
+                : new File(project.getDistDir(), subpath);
+
+        return new File(parentDir, path);
     }
 
     /**
-     * Returns the given filename without its extension (if it has an extension, otherwise as-is).
+     * Returns the given filename without its extension (if it has an extension, otherwise as-is)
+     * and without any leading path elements. For example, getBasename("a/b/c.txt") returns "c".
      */
     public static String getBasename(String filename) {
         if (filename == null || filename.isBlank()) {
@@ -496,7 +503,14 @@ public class ProjectManager {
         if (index == -1) {
             return filename;
         }
-        return filename.substring(0, index);
+        String withoutExtension = filename.substring(0, index);
+
+        // If the given filename contains a path, nuke it:
+        if (withoutExtension.contains("/")) {
+            withoutExtension = withoutExtension.substring(withoutExtension.lastIndexOf("/") + 1);
+        }
+
+        return withoutExtension;
     }
 
     public List<File> findAllJars(Project project) {

@@ -97,7 +97,7 @@ public class ExtensionVersionDialog extends JDialog {
         formPanel.add(new LabelField("Download jar:", extensionVersion.getDownloadPath()));
         String signaturePath = extensionVersion.getSignaturePath();
         if (signaturePath != null && !signaturePath.isBlank()) {
-            File signatureFile = ProjectManager.getInstance().getProjectFileFromPath(extensionVersion, signaturePath);
+            File signatureFile = ProjectManager.getInstance().getProjectFileFromPath(signaturePath);
             LabelField labelField = new LabelField("Signature:", signaturePath);
             try {
                 if (signatureFile == null) {
@@ -125,7 +125,7 @@ public class ExtensionVersionDialog extends JDialog {
         screenshotsField.getImageListPanel().setOwnerWindow(this);
         for (String screenshotPath : extensionVersion.getScreenshots()) {
             try {
-                File screenshotFile = ProjectManager.getInstance().getProjectFileFromPath(extensionVersion, screenshotPath);
+                File screenshotFile = ProjectManager.getInstance().getProjectFileFromPath(screenshotPath);
                 if (screenshotFile == null) {
                     throw new IOException("Screenshot file not found.");
                 }
@@ -172,7 +172,7 @@ public class ExtensionVersionDialog extends JDialog {
                 String basename = ProjectManager.getBasename(extensionVersion.getDownloadPath());
                 for (int i = 0; i < screenshotsField.getImageCount(); i++) {
                     File screenshotFile = ProjectManager.getInstance()
-                                                        .getProjectFileFromPath(
+                                                        .computeExtensionFilePath(
                                                                 extensionVersion,
                                                                 basename + "_screenshot" + (i + 1) + ".jpg");
                     Object rawImage = screenshotsField.getImageListPanel().getImageAt(i);
@@ -181,7 +181,10 @@ public class ExtensionVersionDialog extends JDialog {
                         continue;
                     }
                     ImageUtil.saveImage((BufferedImage)rawImage, screenshotFile);
-                    extensionVersion.addScreenshot(screenshotFile.getName());
+                    extensionVersion.addScreenshot("extensions/"
+                                                           + extensionVersion.getExtInfo().getTargetAppVersion()
+                                                           + "/"
+                                                           + screenshotFile.getName());
                 }
             }
             catch (IOException ioe) {

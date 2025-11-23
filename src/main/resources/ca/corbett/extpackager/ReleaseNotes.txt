@@ -2,6 +2,7 @@ ExtPackager Release Notes
 Author: Steve Corbett
 
 Version 1.1 [TODO]
+  #25 - fix bug in screenshot path calculation
   #23 - fix version manifest extension url bug
   #22 - Scan and verify wasn't verifying properly
 

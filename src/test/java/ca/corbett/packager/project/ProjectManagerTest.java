@@ -32,7 +32,7 @@ class ProjectManagerTest {
     }
 
     @Test
-    public void getProjectFileFromPath_givenValidRootPath_shouldResolve() throws Exception {
+    public void computeExtensionFilePath_givenValidRootPath_shouldResolve() throws Exception {
         final File expected = new File(projectDir, "dist/test.txt");
         String path = "test.txt";
         File actual = ProjectManager.getInstance().getProjectFileFromPath(path);
@@ -41,23 +41,23 @@ class ProjectManagerTest {
     }
 
     @Test
-    public void getProjectFileFromPath_givenValidNonRootPath_shouldResolve() throws Exception {
+    public void computeExtensionFilePath_givenValidNonRootPath_shouldResolve() throws Exception {
         final File expected = new File(projectDir, "dist/a/b/c/test.txt");
         String path = "a/b/c/test.txt";
-        File actual = ProjectManager.getInstance().getProjectFileFromPath(null, path);
+        File actual = ProjectManager.getInstance().computeExtensionFilePath(null, path);
         assertNotNull(actual);
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }
 
     @Test
-    public void getProjectFileFromPath_givenExtensionPath_shouldResolve() throws Exception {
+    public void computeExtensionFilePath_givenExtensionPath_shouldResolve() throws Exception {
         final File expected = new File(projectDir, "dist/extensions/1.0/MyExtension-1.0.0.jar");
         VersionManifest.ExtensionVersion version = new VersionManifest.ExtensionVersion();
         version.setExtInfo(new AppExtensionInfo.Builder("test")
                                    .setTargetAppName("Test")
                                    .setTargetAppVersion("1.0")
                                    .build());
-        File actual = ProjectManager.getInstance().getProjectFileFromPath(version, "MyExtension-1.0.0.jar");
+        File actual = ProjectManager.getInstance().computeExtensionFilePath(version, "MyExtension-1.0.0.jar");
         assertNotNull(actual);
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }
@@ -69,7 +69,7 @@ class ProjectManagerTest {
         assertEquals("hello", ProjectManager.getBasename("hello"));
         assertNull(ProjectManager.getBasename(null));
         assertEquals("  ", ProjectManager.getBasename("  "));
-        assertEquals("path/to/hello", ProjectManager.getBasename("path/to/hello.txt"));
+        assertEquals("hello", ProjectManager.getBasename("path/to/hello.txt"));
     }
 
     private static void deleteDirectoryRecursively(File rootDir) throws IOException {
