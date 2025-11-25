@@ -172,7 +172,7 @@ public class ExtensionVersionDialog extends JDialog {
                 String basename = ProjectManager.getBasename(extensionVersion.getDownloadPath());
                 for (int i = 0; i < screenshotsField.getImageCount(); i++) {
                     File screenshotFile = ProjectManager.getInstance()
-                                                        .computeExtensionFilePath(
+                                                        .computeExtensionFile(
                                                                 extensionVersion,
                                                                 basename + "_screenshot" + (i + 1) + ".jpg");
                     Object rawImage = screenshotsField.getImageListPanel().getImageAt(i);

@@ -3,6 +3,7 @@ Author: Steve Corbett
 
 Version 1.1 [TODO]
   #25 - fix bug in screenshot path calculation
+  #24 - Bug: jar signing failed to update manifest
   #23 - fix version manifest extension url bug
   #22 - Scan and verify wasn't verifying properly
 

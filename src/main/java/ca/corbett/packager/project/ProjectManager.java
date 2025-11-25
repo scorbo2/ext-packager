@@ -473,12 +473,12 @@ public class ProjectManager {
      * </p>
      * <P><b>EXAMPLE:</b></P>
      * <PRE>
-     * getProjectFileFromPath(myExtensionVersion, "MyExtension-1.0.0.jar");
+     * computeExtensionFile(myExtensionVersion, "MyExtension-1.0.0.jar");
      * // This returns "/home/you/yourProjectDir/extensions/1.0/MyExtension-1.0.0.jar"
      * // (we infer the directory structure based on the target app version of the extension)
      * </PRE>
      */
-    public File computeExtensionFilePath(ExtensionVersion extensionVersion, String path) {
+    public File computeExtensionFile(ExtensionVersion extensionVersion, String path) {
         if (extensionVersion == null) {
             return new File(project.getDistDir(), path);
         }
@@ -489,6 +489,26 @@ public class ProjectManager {
                 : new File(project.getDistDir(), subpath);
 
         return new File(parentDir, path);
+    }
+
+    /**
+     * Similar to computeExtensionFile, but will just return the path relative to the base distribution
+     * directory.
+     * <p>For example:</p>
+     * <PRE>
+     * computeExtensionPath(myExtensionVersion, "MyExtension-1.0.0.jar");
+     * // This returns "extensions/1.0/MyExtension-1.0.0.jar"
+     * </PRE>
+     */
+    public String computeExtensionPath(ExtensionVersion version, String path) {
+        if (getProject() == null) {
+            return null;
+        }
+        return getProject().getExtensionsDir().getName()
+                + "/"
+                + version.getExtInfo().getTargetAppVersion()
+                + "/"
+                + path;
     }
 
     /**

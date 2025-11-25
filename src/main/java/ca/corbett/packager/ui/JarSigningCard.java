@@ -158,7 +158,7 @@ public class JarSigningCard extends JPanel implements ProjectListener {
         else {
             getMessageUtil().info(countSigned + " extension jars were signed.");
             try {
-                project.save();
+                ProjectManager.getInstance().save();
             }
             catch (IOException ioe) {
                 getMessageUtil().error("Unable to save project! Error: " + ioe.getMessage(), ioe);
@@ -231,7 +231,8 @@ public class JarSigningCard extends JPanel implements ProjectListener {
             SignatureUtil.signFile(jarFile, project.getPrivateKey(), sigFile);
             VersionManifest.ExtensionVersion extVersion = findExtensionVersionFromJar(project, jarFile);
             if (extVersion != null) {
-                extVersion.setSignaturePath(sigFile.getName());
+                extVersion.setSignaturePath(
+                        ProjectManager.getInstance().computeExtensionPath(extVersion, sigFile.getName()));
             }
             else {
                 log.warning("Unable to find extension version matching jar " + jarFile.getAbsolutePath());
@@ -250,7 +251,7 @@ public class JarSigningCard extends JPanel implements ProjectListener {
         for (VersionManifest.ApplicationVersion appVersion : project.getVersionManifest().getApplicationVersions()) {
             for (VersionManifest.Extension extension : appVersion.getExtensions()) {
                 for (VersionManifest.ExtensionVersion candidateVersion : extension.getVersions()) {
-                    if (jarFile.getName().equals(candidateVersion.getDownloadPath())) {
+                    if (candidateVersion.getDownloadPath().endsWith(jarFile.getName())) {
                         return candidateVersion;
                     }
                 }
