@@ -60,6 +60,12 @@ public final class Version {
      */
     public static final File EXTENSIONS_DIR;
 
+    /**
+     * We'll default to creating projects in our user settings dir
+     * in a projects subdirectory.
+     */
+    public static final File DEFAULT_PROJECTS_DIR;
+
     /** The file containing our saved application config. **/
     public static final File APP_CONFIG_FILE;
 
@@ -99,5 +105,10 @@ public final class Version {
         }
 
         APP_CONFIG_FILE = new File(SETTINGS_DIR, APPLICATION_NAME + ".prefs");
+
+        DEFAULT_PROJECTS_DIR = new File(SETTINGS_DIR, "projects");
+        if (!DEFAULT_PROJECTS_DIR.exists()) {
+            DEFAULT_PROJECTS_DIR.mkdirs();
+        }
     }
 }
