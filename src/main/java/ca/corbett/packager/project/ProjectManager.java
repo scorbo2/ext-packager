@@ -329,7 +329,7 @@ public class ProjectManager {
      * Cleans up all files associated with the given ExtensionVersion within our ExtPackager project directory.
      */
     public void removeExtensionVersion(ExtensionVersion extensionVersion) throws IOException {
-        File parentDir = new File(getProject().getExtensionsDir(), extensionVersion.getExtInfo().getTargetAppVersion());
+        File parentDir = project.getDistDir();
         if (!parentDir.exists() || !parentDir.isDirectory()) {
             return;
         }
