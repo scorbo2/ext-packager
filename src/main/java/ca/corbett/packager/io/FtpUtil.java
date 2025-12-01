@@ -4,6 +4,7 @@ import ca.corbett.updates.UpdateSources;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
+import org.apache.commons.net.ftp.FTPReply;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -12,6 +13,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.logging.Logger;
 
+/**
+ * Provides an easy way to connect to a remote FTP site and upload
+ * the entire distribution contents
+ *
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ */
 public class FtpUtil {
 
     private static final Logger log = Logger.getLogger(FtpUtil.class.getName());
@@ -29,9 +36,16 @@ public class FtpUtil {
         this.ftpParams = params;
         log.info("Attempting connection to \"" + ftpParams.host + "\" as user \"" + ftpParams.username + "\"...");
         ftpClient.connect(ftpParams.host);
-        ftpClient.login(ftpParams.username, ftpParams.password);
+
+        int reply = ftpClient.getReplyCode();
+        if (!FTPReply.isPositiveCompletion(reply)) {
+            ftpClient.disconnect();
+            throw new IOException("FTP server refused connection. Reply code: " + reply);
+        }
+
+        checkReply(ftpClient.login(ftpParams.username, ftpParams.password), "FTP login");
         ftpClient.enterLocalPassiveMode();
-        ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+        checkReply(ftpClient.setFileType(FTP.BINARY_FILE_TYPE), "Set binary file type");
     }
 
     public boolean isConnected() {
@@ -51,7 +65,7 @@ public class FtpUtil {
      * Uploads the contents of the given dist directory to the remote host.
      * This will remove all files in the target directory specified in our ftp params!
      * The workflow is: clean the target directory, then batch upload all files.
-     * In future (see <a href="https://github.com/scorbo2/ext-packager/issues/8">Issue 8</a>,
+     * In future (see <a href="https://github.com/scorbo2/ext-packager/issues/8">Issue 8</a>),
      * this will be smartened up to only upload new/modified files. For now it's nuke and pave.
      */
     public void upload(UpdateSources.UpdateSource updateSource, File distDir) throws IOException {
@@ -109,7 +123,7 @@ public class FtpUtil {
             targetRemoteDir += "/";
         }
         targetRemoteDir += localDir.getName();
-        ftpClient.makeDirectory(targetRemoteDir);
+        checkReply(ftpClient.makeDirectory(targetRemoteDir), "Create directory");
 
         // Now upload all contents:
         File[] files = localDir.listFiles();
@@ -134,7 +148,7 @@ public class FtpUtil {
         }
         log.info("FTP upload: " + localFile.getName() + " -> " + remoteParentDir);
         try (InputStream is = new BufferedInputStream(new FileInputStream(localFile))) {
-            ftpClient.storeFile(remoteParentDir + localFile.getName(), is);
+            checkReply(ftpClient.storeFile(remoteParentDir + localFile.getName(), is), "Upload");
         }
     }
 
@@ -198,17 +212,19 @@ public class FtpUtil {
                 if (file.isDirectory()) {
                     deleteDirectory(filePath, true);
                 } else {
-                    if (!ftpClient.deleteFile(filePath)) {
-                        throw new IOException("Failed to delete file: " + filePath);
-                    }
+                    checkReply(ftpClient.deleteFile(filePath), "Delete file");
                 }
             }
         }
 
         if (alsoRemoveTargetDir) {
-            if (!ftpClient.removeDirectory(targetDir)) {
-                throw new IOException("Failed to delete directory: " + targetDir);
-            }
+            checkReply(ftpClient.removeDirectory(targetDir), "Delete directory");
+        }
+    }
+
+    private void checkReply(boolean success, String operation) throws IOException {
+        if (!success) {
+            throw new IOException(operation + " failed. Server reply: " + ftpClient.getReplyString());
         }
     }
 }

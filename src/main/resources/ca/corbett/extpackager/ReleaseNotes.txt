@@ -2,6 +2,7 @@ ExtPackager Release Notes
 Author: Steve Corbett
 
 Version 1.1 [TODO]
+  #27 - fix multiple bugs in FTPUtil
   #25 - fix bug in screenshot path calculation
   #24 - Bug: jar signing failed to update manifest
   #23 - fix version manifest extension url bug
