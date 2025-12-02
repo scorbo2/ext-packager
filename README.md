@@ -1,5 +1,7 @@
 # ext-packager
 
+![ExtPackager](screenshot.jpg "ExtPackager")
+
 ## What is this?
 
 Given the following:
