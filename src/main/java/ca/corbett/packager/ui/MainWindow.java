@@ -56,6 +56,7 @@ public class MainWindow extends JFrame {
         setSize(new Dimension(700, 520));
         setMinimumSize(new Dimension(500, 400));
         setLayout(new BorderLayout());
+        setIconImage(loadIconResource("/ca/corbett/extpackager/images/logo.png", 64, 64));
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildMenuPanel(), buildContentPanel());
         splitPane.setOneTouchExpandable(false);
         splitPane.setDividerLocation(195);
@@ -198,6 +199,35 @@ public class MainWindow extends JFrame {
             clipboard.setContents(new StringSelection(link), null);
             getMessageUtil().info("Hyperlinks are not enabled in your JRE.\nLink copied to clipboard instead.");
         }
+    }
+
+    /**
+     * Loads and returns an image icon resource, scaling up or down to the given size if needed.
+     *
+     * @param resourceName The path to the resource file containing the image.
+     * @param width        The desired width of the image.
+     * @param height       The desired height of the image.
+     * @return An image, loaded and scaled, or null if the resource was not found.
+     */
+    public static BufferedImage loadIconResource(String resourceName, int width, int height) {
+        BufferedImage image = null;
+        try {
+            URL url = MainWindow.class.getResource(resourceName);
+            if (url == null) {
+                throw new IOException("Image resource not found: " + resourceName);
+            }
+            image = ImageUtil.loadImage(url);
+
+            // If the width or height don't match, scale it up or down as needed:
+            if (image.getWidth() != width || image.getHeight() != height) {
+                image = ImageUtil.generateThumbnailWithTransparency(image, width, height);
+            }
+        }
+        catch (IOException ioe) {
+            log.log(Level.SEVERE, "Error loading image: " + ioe.getMessage(), ioe);
+        }
+
+        return image;
     }
 
     public static boolean isUrl(String url) {
