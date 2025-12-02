@@ -1,7 +1,7 @@
 ExtPackager Release Notes
 Author: Steve Corbett
 
-Version 1.1 [TODO]
+Version 1.1 [2025-12-01]
   #27 - fix multiple bugs in FTPUtil
   #26 - use PasswordField for FTP password
   #25 - fix bug in screenshot path calculation
