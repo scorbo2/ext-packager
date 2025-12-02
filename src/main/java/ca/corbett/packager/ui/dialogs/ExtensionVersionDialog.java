@@ -1,6 +1,7 @@
 package ca.corbett.packager.ui.dialogs;
 
 import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.PopupTextDialog;
 import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.extras.properties.PropertiesDialog;
@@ -103,13 +104,15 @@ public class ExtensionVersionDialog extends JDialog {
                 if (signatureFile == null) {
                     throw new IOException("Signature file not found.");
                 }
-                final PopupTextDialog dialog = new PopupTextDialog(MainWindow.getInstance(),
+                final ExtensionVersionDialog thisDialog = this;
+                final PopupTextDialog dialog = new PopupTextDialog(thisDialog,
                                                                    "Signature:",
                                                                    FileSystemUtil.readFileToString(signatureFile),
-                                                                   false);
+                                                                   true);
                 labelField.setHyperlink(new AbstractAction() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
+                        dialog.setLocationRelativeTo(thisDialog);
                         dialog.setVisible(true);
                     }
                 });
@@ -146,10 +149,11 @@ public class ExtensionVersionDialog extends JDialog {
             return;
         }
         LabelField labelField = new LabelField(label, "click to view");
+        final ExtensionVersionDialog thisDialog = this;
         labelField.setHyperlink(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new PopupTextDialog(MainWindow.getInstance(), label, text, false).setVisible(true);
+                new PopupTextDialog(thisDialog, label, text, true).setVisible(true);
             }
         });
         formPanel.add(labelField);
