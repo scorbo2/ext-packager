@@ -1,6 +1,7 @@
 package ca.corbett.packager.ui;
 
 import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.PopupTextDialog;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
@@ -11,7 +12,6 @@ import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
 import ca.corbett.packager.ui.dialogs.NewProjectDialog;
-import ca.corbett.packager.ui.dialogs.PopupTextDialog;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;

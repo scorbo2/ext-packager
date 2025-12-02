@@ -12,6 +12,7 @@ import ca.corbett.forms.fields.ComboField;
 import ca.corbett.forms.fields.FormField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.PanelField;
+import ca.corbett.forms.fields.PasswordField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.forms.validators.FieldValidator;
 import ca.corbett.forms.validators.ValidationResult;
@@ -55,9 +56,10 @@ public class UploadCard extends JPanel implements ProjectListener {
     private final LabelField targetDirField;
     private final ShortTextField ftpHostField;
     private final ShortTextField ftpUsernameField;
-    private final ShortTextField ftpPasswordField;
+    private final PasswordField ftpPasswordField;
     private final ShortTextField ftpTargetDirField;
     private final CheckBoxField ftpSaveParamsCheckbox;
+    private final CheckBoxField cleanDirBeforeUpload;
 
     public UploadCard() {
         setLayout(new BorderLayout());
@@ -99,21 +101,23 @@ public class UploadCard extends JPanel implements ProjectListener {
         ftpUsernameField.setVisible(false);
         ftpUsernameField.setAllowBlank(false);
         ftpUsernameField.setText(props.getString("ftpUser", ""));
-        ftpPasswordField = new ShortTextField("Password:", 15);
+        ftpPasswordField = new PasswordField("Password:", 15);
         ftpPasswordField.setVisible(false);
         ftpPasswordField.setAllowBlank(false);
+        ftpPasswordField.setPassword(props.getString("ftpPass", ""));
         ftpTargetDirField = new ShortTextField("Target dir:", 15);
         ftpTargetDirField.setVisible(false);
         ftpTargetDirField.setAllowBlank(false);
         ftpTargetDirField.setText(props.getString("ftpDir", ""));
         ftpSaveParamsCheckbox = new CheckBoxField("Save FTP parameters", true);
         ftpSaveParamsCheckbox.setVisible(false);
+        cleanDirBeforeUpload = new CheckBoxField("Clean FTP directory before upload", true);
         formPanel.add(ftpHostField);
         formPanel.add(ftpUsernameField);
         formPanel.add(ftpPasswordField);
         formPanel.add(ftpTargetDirField);
         formPanel.add(ftpSaveParamsCheckbox);
-
+        formPanel.add(cleanDirBeforeUpload);
 
         PanelField panelField = new PanelField(new FlowLayout(FlowLayout.LEFT));
         JButton button = new JButton("Upload");
@@ -193,13 +197,18 @@ public class UploadCard extends JPanel implements ProjectListener {
 
         UpdateSources.UpdateSource updateSource = updateSources.get(sourceCombo.getSelectedIndex());
         if (updateSource.getBaseUrl().getProtocol().equalsIgnoreCase("file")) {
-            FileSystemUploadThread worker = new FileSystemUploadThread(project, new File(targetDirField.getText()));
+            FileSystemUploadThread worker = new FileSystemUploadThread(project,
+                                                                       new File(targetDirField.getText()),
+                                                                       cleanDirBeforeUpload.isChecked());
             worker.addProgressListener(new UploadProgressListener());
             new MultiProgressDialog(MainWindow.getInstance(), "Filesystem upload")
                     .runWorker(worker, true);
         }
         else {
-            FtpUploadThread worker = new FtpUploadThread(project, updateSource, buildFtpParams());
+            FtpUploadThread worker = new FtpUploadThread(project,
+                                                         updateSource,
+                                                         buildFtpParams(),
+                                                         cleanDirBeforeUpload.isChecked());
             worker.addProgressListener(new UploadProgressListener());
             new MultiProgressDialog(MainWindow.getInstance(), "FTP upload")
                     .runWorker(worker, true);
@@ -211,14 +220,14 @@ public class UploadCard extends JPanel implements ProjectListener {
         params.host = ftpHostField.getText();
         params.username = ftpUsernameField.getText();
         params.targetDir = ftpTargetDirField.getText();
-        params.password = ftpPasswordField.getText();
+        params.password = ftpPasswordField.getPassword();
 
         // Save all ftp props if directed, or blank them out otherwise:
-        // (note we deliberately don't save the password here, bit of a security leak)
         Properties props = AppConfig.getInstance().getPropertiesManager().getPropertiesInstance();
         props.setString("ftpHost", ftpSaveParamsCheckbox.isChecked() ? ftpHostField.getText() : "");
         props.setString("ftpUser", ftpSaveParamsCheckbox.isChecked() ? ftpUsernameField.getText() : "");
         props.setString("ftpDir", ftpSaveParamsCheckbox.isChecked() ? ftpTargetDirField.getText() : "");
+        props.setString("ftpPass", ftpSaveParamsCheckbox.isChecked() ? ftpPasswordField.getPassword() : "");
         AppConfig.getInstance().save();
 
         return params;

@@ -1,6 +1,7 @@
 package ca.corbett.packager.ui.dialogs;
 
 import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.PopupTextDialog;
 import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.extras.properties.PropertiesDialog;
@@ -14,6 +15,7 @@ import ca.corbett.updates.VersionManifest;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
@@ -21,6 +23,7 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -95,19 +98,21 @@ public class ExtensionVersionDialog extends JDialog {
         formPanel.add(new LabelField("Download jar:", extensionVersion.getDownloadPath()));
         String signaturePath = extensionVersion.getSignaturePath();
         if (signaturePath != null && !signaturePath.isBlank()) {
-            File signatureFile = ProjectManager.getInstance().getProjectFileFromPath(extensionVersion, signaturePath);
+            File signatureFile = ProjectManager.getInstance().getProjectFileFromPath(signaturePath);
             LabelField labelField = new LabelField("Signature:", signaturePath);
             try {
                 if (signatureFile == null) {
                     throw new IOException("Signature file not found.");
                 }
-                final PopupTextDialog dialog = new PopupTextDialog(MainWindow.getInstance(),
+                final ExtensionVersionDialog thisDialog = this;
+                final PopupTextDialog dialog = new PopupTextDialog(thisDialog,
                                                                    "Signature:",
                                                                    FileSystemUtil.readFileToString(signatureFile),
-                                                                   false);
+                                                                   true);
                 labelField.setHyperlink(new AbstractAction() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
+                        dialog.setLocationRelativeTo(thisDialog);
                         dialog.setVisible(true);
                     }
                 });
@@ -120,10 +125,10 @@ public class ExtensionVersionDialog extends JDialog {
 
         screenshotsField = new ImageListField("Screenshots:", 1);
         screenshotsField.setShouldExpand(true);
-        //screenshotsField.getImageListPanel().setOwnerFrame(this); // TODO Needs swing-extras #159
+        screenshotsField.getImageListPanel().setOwnerWindow(this);
         for (String screenshotPath : extensionVersion.getScreenshots()) {
             try {
-                File screenshotFile = ProjectManager.getInstance().getProjectFileFromPath(extensionVersion, screenshotPath);
+                File screenshotFile = ProjectManager.getInstance().getProjectFileFromPath(screenshotPath);
                 if (screenshotFile == null) {
                     throw new IOException("Screenshot file not found.");
                 }
@@ -144,10 +149,11 @@ public class ExtensionVersionDialog extends JDialog {
             return;
         }
         LabelField labelField = new LabelField(label, "click to view");
+        final ExtensionVersionDialog thisDialog = this;
         labelField.setHyperlink(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new PopupTextDialog(MainWindow.getInstance(), label, text, false).setVisible(true);
+                new PopupTextDialog(thisDialog, label, text, true).setVisible(true);
             }
         });
         formPanel.add(labelField);
@@ -170,11 +176,19 @@ public class ExtensionVersionDialog extends JDialog {
                 String basename = ProjectManager.getBasename(extensionVersion.getDownloadPath());
                 for (int i = 0; i < screenshotsField.getImageCount(); i++) {
                     File screenshotFile = ProjectManager.getInstance()
-                                                        .getProjectFileFromPath(
+                                                        .computeExtensionFile(
                                                                 extensionVersion,
                                                                 basename + "_screenshot" + (i + 1) + ".jpg");
-                    ImageUtil.saveImage(screenshotsField.getImageListPanel().getImageAt(i), screenshotFile);
-                    extensionVersion.addScreenshot(screenshotFile.getName());
+                    Object rawImage = screenshotsField.getImageListPanel().getImageAt(i);
+                    if (rawImage instanceof ImageIcon) {
+                        log.warning("Animated GIF screenshots are not supported - skipping.");
+                        continue;
+                    }
+                    ImageUtil.saveImage((BufferedImage)rawImage, screenshotFile);
+                    extensionVersion.addScreenshot("extensions/"
+                                                           + extensionVersion.getExtInfo().getTargetAppVersion()
+                                                           + "/"
+                                                           + screenshotFile.getName());
                 }
             }
             catch (IOException ioe) {

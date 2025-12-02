@@ -65,7 +65,7 @@ public class AppConfig extends AppProperties<AppConfig.NullExtension> {
         projectBaseDirProp = new DirectoryProperty("General.General.projectBaseDir",
                                                    "Project base dir:",
                                                    true,
-                                                   null);
+                                                   Version.DEFAULT_PROJECTS_DIR);
         props.add(projectBaseDirProp);
 
         return props;

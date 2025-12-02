@@ -30,10 +30,12 @@ public class FileSystemUploadThread extends SimpleProgressWorker {
 
     private final Project project;
     private final File targetDir;
+    private final boolean cleanBeforeCopy;
 
-    public FileSystemUploadThread(Project project, File targetDir) {
+    public FileSystemUploadThread(Project project, File targetDir, boolean cleanFirst) {
         this.project = project;
         this.targetDir = targetDir;
+        this.cleanBeforeCopy = cleanFirst;
     }
 
     @Override
@@ -52,8 +54,10 @@ public class FileSystemUploadThread extends SimpleProgressWorker {
             project.getVersionManifest().setManifestGenerated(Instant.now());
             project.saveVersionManifest();
 
-            log.info("Cleaning target directory: " + targetDir.getAbsolutePath());
-            FileUtils.cleanDirectory(targetDir);
+            if (cleanBeforeCopy) {
+                log.info("Cleaning target directory: " + targetDir.getAbsolutePath());
+                FileUtils.cleanDirectory(targetDir);
+            }
             fireProgressUpdate(1, "Copying distribution files");
 
             if (project.getPublicKeyFile().exists()) {

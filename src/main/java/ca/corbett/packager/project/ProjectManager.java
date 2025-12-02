@@ -225,9 +225,10 @@ public class ProjectManager {
     public ExtensionVersion importExtensionJar(VersionManifest versionManifest, File extensionJar) throws Exception {
         AppExtensionInfo extInfo = getExtInfoFromJar(extensionJar, versionManifest.getApplicationName());
         ApplicationVersion appVersion = findOrCreateApplicationVersion(versionManifest, extInfo.getTargetAppVersion());
+        String appVer = appVersion.getVersion();
         Extension extension = findOrCreateExtension(appVersion, extInfo.getName());
-        ExtensionVersion extensionVersion = findOrCreateExtensionVersion(extension, extInfo, extensionJar);
-        copyJarToProjectDirectory(extensionVersion, extensionJar, appVersion.getVersion());
+        ExtensionVersion extensionVersion = findOrCreateExtensionVersion(extension, extInfo, extensionJar, appVer);
+        copyJarToProjectDirectory(extensionVersion, extensionJar, appVer);
         return extensionVersion;
     }
 
@@ -273,7 +274,7 @@ public class ProjectManager {
      * Searches the given Extension for an ExtensionVersion that matches the supplied extInfo,
      * and returns it if it exists. If it does not exist, it will be created, added to the Extension, and returned.
      */
-    public ExtensionVersion findOrCreateExtensionVersion(Extension extension, AppExtensionInfo extInfo, File jarFile) {
+    public ExtensionVersion findOrCreateExtensionVersion(Extension extension, AppExtensionInfo extInfo, File jarFile, String appVersion) {
         for (ExtensionVersion version : extension.getVersions()) {
             if (version.getExtInfo().getName().equals(extInfo.getName())
                     && version.getExtInfo().getVersion().equals(extInfo.getVersion())) {
@@ -282,16 +283,20 @@ public class ProjectManager {
             }
         }
 
+        // Get base path:
+        String basePath = ProjectManager.getInstance().getProject().getExtensionsDir()
+                                        .getName() + "/" + appVersion + "/";
+
         // Extension version doesn't exist, create it
         log.info("Creating new extension version: " + extInfo.getName() + " version " + extInfo.getVersion());
         VersionManifest.ExtensionVersion extVersion = new VersionManifest.ExtensionVersion();
         extVersion.setExtInfo(extInfo);
-        extVersion.setDownloadPath(jarFile.getName());
+        extVersion.setDownloadPath(basePath + jarFile.getName());
 
         // See if there's a signature file here:
         File signatureFile = new File(jarFile.getParentFile(), getBasename(jarFile.getName()) + ".sig");
         if (signatureFile.exists()) {
-            extVersion.setSignaturePath(signatureFile.getName());
+            extVersion.setSignaturePath(basePath + signatureFile.getName());
         }
 
         extension.addVersion(extVersion);
@@ -324,7 +329,7 @@ public class ProjectManager {
      * Cleans up all files associated with the given ExtensionVersion within our ExtPackager project directory.
      */
     public void removeExtensionVersion(ExtensionVersion extensionVersion) throws IOException {
-        File parentDir = new File(getProject().getExtensionsDir(), extensionVersion.getExtInfo().getTargetAppVersion());
+        File parentDir = project.getDistDir();
         if (!parentDir.exists() || !parentDir.isDirectory()) {
             return;
         }
@@ -376,6 +381,9 @@ public class ProjectManager {
         if (!appVersionDir.exists()) {
             appVersionDir.mkdirs();
         }
+        // Get base path:
+        String basePath = ProjectManager.getInstance().getProject().getExtensionsDir()
+                                        .getName() + "/" + appVersion + "/";
 
         // Copy the jar itself:
         File targetFile = new File(appVersionDir, jar.getName());
@@ -388,7 +396,7 @@ public class ProjectManager {
             Files.copy(screenshot.toPath(),
                        targetFile.toPath(),
                        StandardCopyOption.REPLACE_EXISTING);
-            extensionVersion.addScreenshot(targetFile.getName());
+            extensionVersion.addScreenshot(basePath + targetFile.getName());
         }
     }
 
@@ -444,7 +452,7 @@ public class ProjectManager {
      * <pre>getProjectFileFromPath("public.key"); // returns /home/you/yourProjectDir/public.key</pre>
      */
     public File getProjectFileFromPath(String path) {
-        return getProjectFileFromPath(null, path);
+        return new File(project.getDistDir(), path);
     }
 
     /**
@@ -465,20 +473,47 @@ public class ProjectManager {
      * </p>
      * <P><b>EXAMPLE:</b></P>
      * <PRE>
-     * getProjectFileFromPath(myExtensionVersion, "MyExtension-1.0.0.jar");
+     * computeExtensionFile(myExtensionVersion, "MyExtension-1.0.0.jar");
      * // This returns "/home/you/yourProjectDir/extensions/1.0/MyExtension-1.0.0.jar"
      * // (we infer the directory structure based on the target app version of the extension)
      * </PRE>
      */
-    public File getProjectFileFromPath(ExtensionVersion extensionVersion, String path) {
-        File containingDir = extensionVersion == null
+    public File computeExtensionFile(ExtensionVersion extensionVersion, String path) {
+        if (extensionVersion == null) {
+            return new File(project.getDistDir(), path);
+        }
+
+        String subpath = "extensions/" + extensionVersion.getExtInfo().getTargetAppVersion();
+        File parentDir = path.contains(subpath)
                 ? project.getDistDir()
-                : new File(project.getDistDir(), "extensions/" + extensionVersion.getExtInfo().getTargetAppVersion());
-        return new File(containingDir, path);
+                : new File(project.getDistDir(), subpath);
+
+        return new File(parentDir, path);
     }
 
     /**
-     * Returns the given filename without its extension (if it has an extension, otherwise as-is).
+     * Similar to computeExtensionFile, but will just return the path relative to the base distribution
+     * directory.
+     * <p>For example:</p>
+     * <PRE>
+     * computeExtensionPath(myExtensionVersion, "MyExtension-1.0.0.jar");
+     * // This returns "extensions/1.0/MyExtension-1.0.0.jar"
+     * </PRE>
+     */
+    public String computeExtensionPath(ExtensionVersion version, String path) {
+        if (getProject() == null) {
+            return null;
+        }
+        return getProject().getExtensionsDir().getName()
+                + "/"
+                + version.getExtInfo().getTargetAppVersion()
+                + "/"
+                + path;
+    }
+
+    /**
+     * Returns the given filename without its extension (if it has an extension, otherwise as-is)
+     * and without any leading path elements. For example, getBasename("a/b/c.txt") returns "c".
      */
     public static String getBasename(String filename) {
         if (filename == null || filename.isBlank()) {
@@ -488,7 +523,14 @@ public class ProjectManager {
         if (index == -1) {
             return filename;
         }
-        return filename.substring(0, index);
+        String withoutExtension = filename.substring(0, index);
+
+        // If the given filename contains a path, nuke it:
+        if (withoutExtension.contains("/")) {
+            withoutExtension = withoutExtension.substring(withoutExtension.lastIndexOf("/") + 1);
+        }
+
+        return withoutExtension;
     }
 
     public List<File> findAllJars(Project project) {

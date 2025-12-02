@@ -16,17 +16,25 @@ public class FtpUploadThread extends SimpleProgressWorker {
     private final Project project;
     private final UpdateSources.UpdateSource updateSource;
     private final FtpParams ftpParams;
+    private final boolean cleanBeforeUpload;
+    private boolean wasSuccessful;
 
-    public FtpUploadThread(Project project, UpdateSources.UpdateSource updateSource, FtpParams params) {
+    public FtpUploadThread(Project project, UpdateSources.UpdateSource updateSource, FtpParams params, boolean cleanFirst) {
         this.project = project;
         this.updateSource = updateSource;
         this.ftpParams = params;
+        this.cleanBeforeUpload = cleanFirst;
+    }
+
+    public boolean wasSuccessful() {
+        return wasSuccessful;
     }
 
     @Override
     public void run() {
         fireProgressBegins(4);
         FtpUtil ftp = null;
+        wasSuccessful = false;
 
         try {
             // Sanity checks off the bat:
@@ -52,7 +60,9 @@ public class FtpUploadThread extends SimpleProgressWorker {
             ftp.connect(ftpParams);
 
             // Clean the existing target directory:
-            ftp.cleanDirectory(ftpParams.targetDir);
+            if (cleanBeforeUpload) {
+                ftp.cleanDirectory(ftpParams.targetDir);
+            }
 
             // Public key (optional):
             if (updateSource.getPublicKeyRelativePath() != null) {
@@ -70,6 +80,7 @@ public class FtpUploadThread extends SimpleProgressWorker {
             ftp.uploadDirectory(project.getExtensionsDir(), ftpParams.targetDir);
 
             fireProgressComplete();
+            wasSuccessful = true;
         }
         catch (IOException ioe) {
             log.log(Level.SEVERE, "FTP upload failed: " + ioe.getMessage(), ioe);
