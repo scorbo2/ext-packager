@@ -7,7 +7,7 @@
 - **Language**: Java 17
 - **Build System**: Apache Maven 3.9.11
 - **Project Type**: Desktop GUI application (Swing)
-- **Size**: ~4,700 lines of Java code in 24 source files
+- **Size**: ~4,700 lines of Java code in 23 source files
 - **Main Dependencies**: swing-extras 2.5.0, commons-net 3.9.0, commons-io 2.19.0, FlatLaf UI themes
 - **Test Framework**: JUnit 5 (Jupiter) with Mockito
 
