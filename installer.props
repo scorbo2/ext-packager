@@ -8,7 +8,10 @@ FORMAT="tarball"
 
 # Application name/version will also be used for the jar file name.
 APPLICATION="ExtPackager"
-VERSION="1.1"
+VERSION="1.2-SNAPSHOT"
+
+# For controlling where our application icon goes in the system menu:
+CATEGORY="Development"
 
 PROJECT_URL="https://github.com/scorbo2/ext-packager"
 OUTPUT_DIR=target

@@ -1,6 +1,7 @@
 # ext-packager
 
 ![ExtPackager](screenshot.jpg "ExtPackager")
+TODO - update screenshto for 1.2 release
 
 ## What is this?
 
@@ -66,7 +67,5 @@ the user that an upgrade is available. (Application self-update not yet supporte
 ext-packager is made available under the MIT license: https://opensource.org/license/mit
 
 ## Revision history
-
-2025-11-02: Initial release.
 
 [Full release notes and version history](src/main/resources/ca/corbett/extpackager/ReleaseNotes.txt)
