@@ -1,6 +1,9 @@
 ExtPackager Release Notes
 Author: Steve Corbett
 
+Version 1.2 [2025-12-31]
+  #38 - Upgrade to swing-extras 2.6
+
 Version 1.1 [2025-12-01]
   #28 - add make-installer support
   #27 - fix multiple bugs in FTPUtil
