@@ -319,14 +319,18 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         autoSave = false; // wait until we're fully populated before saving
 
         try {
-            // Dumb initial value in case the proper application name is not set:
+            // Blank out our current values:
+            appNameField.setText("");
+            appVersionListField.getListModel().clear();
+            extensionListField.getListModel().clear();
+            extensionVersionListField.getListModel().clear();
+
+            // If we have no manifest, we're done:
             if (versionManifest == null) {
-                appNameField.setText("");
                 return;
             }
 
-            DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
-            listModel.clear();
+            // Populate based on given manifest:
             List<VersionManifest.ApplicationVersion> sortedList = versionManifest
                     .getApplicationVersions()
                     .stream()
@@ -345,9 +349,12 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
     }
 
+    /**
+     * Fired when a project is about to be loaded - we don't need to do anything here.
+     */
     @Override
-    public void projectWillLoad(Project project) {
-
+    public void projectWillLoad(Project ignored) {
+        // No action needed
     }
 
     /**
@@ -359,14 +366,21 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         populateFields(project.getVersionManifest());
     }
 
+    /**
+     * Fired when the current project is saved. We repopulate our fields in case the
+     * version manifest changed.
+     */
     @Override
     public void projectSaved(Project project) {
         populateFields(project.getVersionManifest());
     }
 
+    /**
+     * Fired when the current project is closed. We clear our fields.
+     */
     @Override
     public void projectClosed(Project project) {
-
+        populateFields(null);
     }
 
     /**

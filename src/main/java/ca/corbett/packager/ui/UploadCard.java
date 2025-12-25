@@ -233,9 +233,20 @@ public class UploadCard extends JPanel implements ProjectListener {
         return params;
     }
 
-    private void validateForm() {
-        Project project = ProjectManager.getInstance().getProject();
+    /**
+     * Populate the source combo from the given project, or clear it if project is null.
+     */
+    private void populateSourceFromProject(Project project) {
+        sourceCombo.getComboModel().removeAllElements();
+        if (project == null || project.getUpdateSources() == null) {
+            return;
+        }
+        for (UpdateSources.UpdateSource source : project.getUpdateSources().getUpdateSources()) {
+            sourceCombo.getComboModel().addElement(source.getName());
+        }
+    }
 
+    private void validateForm(Project project) {
         if (project == null) {
             setAllValidation("No project loaded.");
             formPanel.validateForm();
@@ -243,18 +254,12 @@ public class UploadCard extends JPanel implements ProjectListener {
         }
 
         setAllValidation(null);
-        sourceCombo.getComboModel().removeAllElements();
 
         if (project.getPrivateKey() == null || project.getPublicKey() == null) {
             keyPairValidator.setMessage("Project has no key pair - unable to sign.");
         }
         if (project.getUpdateSources() == null || project.getUpdateSources().getUpdateSources().isEmpty()) {
             updateSourceValidator.setMessage("Project has no update source defined.");
-        }
-        else {
-            for (UpdateSources.UpdateSource source : project.getUpdateSources().getUpdateSources()) {
-                sourceCombo.getComboModel().addElement(source.getName());
-            }
         }
         List<File> jarFiles = ProjectManager.getInstance().findAllJars(project);
         if (jarFiles.isEmpty()) {
@@ -281,24 +286,39 @@ public class UploadCard extends JPanel implements ProjectListener {
         jarsSignedValidator.setMessage(message);
     }
 
+    /**
+     * Invoked before a project is loaded - no action needed.
+     */
     @Override
-    public void projectWillLoad(Project project) {
-
+    public void projectWillLoad(Project ignored) {
+        // No action needed
     }
 
+    /**
+     * Fired after a project has been loaded.
+     */
     @Override
     public void projectLoaded(Project project) {
-        validateForm();
+        populateSourceFromProject(project);
+        validateForm(project);
     }
 
+    /**
+     * Fired after a project has been saved.
+     */
     @Override
     public void projectSaved(Project project) {
-        validateForm();
+        populateSourceFromProject(project);
+        validateForm(project);
     }
 
+    /**
+     * Fired after a project has been closed.
+     */
     @Override
     public void projectClosed(Project project) {
-
+        formPanel.clearValidationResults();
+        populateSourceFromProject(null);
     }
 
     private static class CheckValidator implements FieldValidator<FormField> {

@@ -34,8 +34,7 @@ public class ProjectManager {
 
     private final List<ProjectListener> projectListeners = new ArrayList<>();
     private Project project;
-    private boolean isSaveInProgress = false;
-    private boolean isLoadInProgress = false;
+    private volatile boolean isProjectIOInProgress = false;
 
     private ProjectManager() {
 
@@ -59,31 +58,48 @@ public class ProjectManager {
      * Creates a new, empty project with the given name in the given location.
      */
     public void newProject(String name, File projectDir) throws IOException {
-        project = Project.createNew(name, projectDir);
-        fireProjectWillLoadEvent(project); // give listeners a heads-up that we're about to load it
-        fireProjectLoadedEvent(project); // now tell them it's loaded
-        log.info("Created new project: " + project.getName() + " in directory " + projectDir.getAbsolutePath());
+        if (isProjectIOInProgress) {
+            log.warning("Ignoring request to create new project because another project I/O operation is in progress.");
+            return;
+        }
+        isProjectIOInProgress = true;
+        try {
+            // Create the project and give listeners a heads-up that we're about to load it:
+            Project newProject = Project.createNew(name, projectDir);
+            fireProjectWillLoadEvent(newProject);
+
+            // Now set it and tell listeners it's loaded:
+            project = newProject;
+            fireProjectLoadedEvent(project);
+
+            log.info("Created new project: " + project.getName() + " in directory " + projectDir.getAbsolutePath());
+        }
+        finally {
+            startProjectIOTimer();
+        }
     }
 
     /**
      * Attempts to load the given ext-packager Project from the given project file.
      */
     public void loadProject(File projectFile) throws IOException {
-        if (isLoadInProgress) {
+        if (isProjectIOInProgress) {
+            log.warning("Ignoring request to load project because another project I/O operation is in progress.");
             return;
         }
         log.info("Loading project: " + projectFile.getAbsolutePath());
-        isLoadInProgress = true;
+        isProjectIOInProgress = true;
         try {
-            project = Project.fromFile(projectFile);
-            fireProjectWillLoadEvent(project);
+            // Load the project and give listeners a heads-up that we're about to load it:
+            Project newProject = Project.fromFile(projectFile);
+            fireProjectWillLoadEvent(newProject);
+
+            // Now set it and tell listeners it's loaded:
+            project = newProject;
             fireProjectLoadedEvent(project);
         }
         finally {
-            // Extremely cheesy, but we have to wait for coalescing doc listeners to finish responding to the save.
-            Timer timer = new Timer(CoalescingDocumentListener.DELAY_MS * 2, e -> isLoadInProgress = false);
-            timer.setRepeats(false);
-            timer.start();
+            startProjectIOTimer();
         }
     }
 
@@ -91,20 +107,19 @@ public class ProjectManager {
      * Saves any changes to the current Project, if one is open.
      */
     public void save() throws IOException {
-        if (project == null || isSaveInProgress || isLoadInProgress) {
+        if (project == null || isProjectIOInProgress) {
+            log.warning("Ignoring request to save project because no project is open, "
+                                + "or because another project I/O operation is in progress.");
             return;
         }
         log.info("Saving current project");
-        isSaveInProgress = true;
+        isProjectIOInProgress = true;
         try {
             project.save();
             fireProjectSavedEvent(project);
         }
         finally {
-            // Extremely cheesy, but we have to wait for coalescing doc listeners to finish responding to the save.
-            Timer timer = new Timer(CoalescingDocumentListener.DELAY_MS * 2, e -> isSaveInProgress = false);
-            timer.setRepeats(false);
-            timer.start();
+            startProjectIOTimer();
         }
     }
 
@@ -113,6 +128,10 @@ public class ProjectManager {
      * listeners that the project has been closed.
      */
     public void close() {
+        if (isProjectIOInProgress) {
+            log.warning("Ignoring request to close project because another project I/O operation is in progress.");
+            return;
+        }
         if (project != null) {
             log.info("Closing current project: " + project.getName());
             Project oldProject = project;
@@ -131,7 +150,7 @@ public class ProjectManager {
      * Reports whether a Project is currently open.
      */
     public boolean isProjectOpen() {
-        return project != null;
+        return project != null && !isProjectIOInProgress;
     }
 
     /**
@@ -584,7 +603,19 @@ public class ProjectManager {
     }
 
     /**
-     * Notify listeners that we're about the load the given Project.
+     * Starts a timer that will clear the isLoadInProgress flag after a short delay.
+     * The delay is an unfortunate necessity due to the way the CoalescingDocumentListener
+     * works - we have to give it time to finish processing any pending document changes
+     * that might have been triggered by the load.
+     */
+    private void startProjectIOTimer() {
+        Timer timer = new Timer(CoalescingDocumentListener.DELAY_MS * 2, e -> isProjectIOInProgress = false);
+        timer.setRepeats(false);
+        timer.start();
+    }
+
+    /**
+     * Notify listeners that we're about to load the given Project.
      * This is intended for callers who need to know before the load actually happens.
      */
     private void fireProjectWillLoadEvent(Project project) {
