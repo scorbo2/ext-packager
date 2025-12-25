@@ -282,6 +282,11 @@ public class UploadCard extends JPanel implements ProjectListener {
     }
 
     @Override
+    public void projectWillLoad(Project project) {
+
+    }
+
+    @Override
     public void projectLoaded(Project project) {
         validateForm();
     }
@@ -289,6 +294,11 @@ public class UploadCard extends JPanel implements ProjectListener {
     @Override
     public void projectSaved(Project project) {
         validateForm();
+    }
+
+    @Override
+    public void projectClosed(Project project) {
+
     }
 
     private static class CheckValidator implements FieldValidator<FormField> {

@@ -3,7 +3,6 @@ package ca.corbett.packager.project;
 import ca.corbett.extensions.AppExtensionInfo;
 import ca.corbett.extras.CoalescingDocumentListener;
 import ca.corbett.extras.io.FileSystemUtil;
-import ca.corbett.packager.ui.MainWindow;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.Timer;
@@ -61,8 +60,9 @@ public class ProjectManager {
      */
     public void newProject(String name, File projectDir) throws IOException {
         project = Project.createNew(name, projectDir);
-        MainWindow.getInstance().projectOpened();
-        fireProjectLoadedEvent(project);
+        fireProjectWillLoadEvent(project); // give listeners a heads-up that we're about to load it
+        fireProjectLoadedEvent(project); // now tell them it's loaded
+        log.info("Created new project: " + project.getName() + " in directory " + projectDir.getAbsolutePath());
     }
 
     /**
@@ -76,7 +76,7 @@ public class ProjectManager {
         isLoadInProgress = true;
         try {
             project = Project.fromFile(projectFile);
-            MainWindow.getInstance().projectOpened();
+            fireProjectWillLoadEvent(project);
             fireProjectLoadedEvent(project);
         }
         finally {
@@ -106,6 +106,32 @@ public class ProjectManager {
             timer.setRepeats(false);
             timer.start();
         }
+    }
+
+    /**
+     * Closes the current project (if one is loaded), and notifies
+     * listeners that the project has been closed.
+     */
+    public void close() {
+        if (project != null) {
+            log.info("Closing current project: " + project.getName());
+            Project oldProject = project;
+            project = null;
+            List<ProjectListener> copy = new ArrayList<>(projectListeners);
+            for (ProjectListener listener : copy) {
+                listener.projectClosed(oldProject);
+            }
+        }
+        else {
+            log.warning("Ignoring request to close project because no project is currently open.");
+        }
+    }
+
+    /**
+     * Reports whether a Project is currently open.
+     */
+    public boolean isProjectOpen() {
+        return project != null;
     }
 
     /**
@@ -557,6 +583,20 @@ public class ProjectManager {
         projectListeners.remove(listener);
     }
 
+    /**
+     * Notify listeners that we're about the load the given Project.
+     * This is intended for callers who need to know before the load actually happens.
+     */
+    private void fireProjectWillLoadEvent(Project project) {
+        List<ProjectListener> copy = new ArrayList<>(projectListeners);
+        for (ProjectListener listener : copy) {
+            listener.projectWillLoad(project);
+        }
+    }
+
+    /**
+     * Notify listeners that the given Project has just been loaded into this ProjectManager instance.
+     */
     private void fireProjectLoadedEvent(Project project) {
         List<ProjectListener> copy = new ArrayList<>(projectListeners);
         for (ProjectListener listener : copy) {
@@ -564,6 +604,9 @@ public class ProjectManager {
         }
     }
 
+    /**
+     * Notify listeners that the given Project has just been persisted.
+     */
     private void fireProjectSavedEvent(Project project) {
         List<ProjectListener> copy = new ArrayList<>(projectListeners);
         for (ProjectListener listener : copy) {

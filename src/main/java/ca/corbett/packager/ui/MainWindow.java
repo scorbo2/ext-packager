@@ -6,6 +6,8 @@ import ca.corbett.extras.image.ImagePanelConfig;
 import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.packager.Version;
+import ca.corbett.packager.project.Project;
+import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
 
 import javax.swing.DefaultListModel;
@@ -37,7 +39,7 @@ import java.util.logging.Logger;
  *
  * @author <a href="https://github.com/scorbo2">scorbo2</a>
  */
-public class MainWindow extends JFrame {
+public class MainWindow extends JFrame implements ProjectListener {
 
     private static final Logger log = Logger.getLogger(MainWindow.class.getName());
 
@@ -68,20 +70,6 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Adds the remaining options to our menu now that a project is selected.
-     */
-    public void projectOpened() {
-        if (cardListModel.size() > 3) {
-            return; // already done - only do it once
-        }
-        addContentPanel(new KeyPairCard(), "Key management", 2);
-        addContentPanel(new UpdateSourcesCard(), "Update sources", 3);
-        addContentPanel(new VersionManifestCard(), "Version manifest", 4);
-        addContentPanel(new JarSigningCard(), "Jar signing", 5);
-        addContentPanel(new UploadCard(), "Upload", 6);
-    }
-
-    /**
      * Invoked only from Main in the event we get a command line arg for a project to open on startup.
      * Calling this after MainWindow is shown does nothing.
      */
@@ -92,6 +80,7 @@ public class MainWindow extends JFrame {
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(true);
+        ProjectManager.getInstance().addProjectListener(this);
         if (startupProjectFile != null) {
             try {
                 ProjectManager.getInstance().loadProject(startupProjectFile);
@@ -239,5 +228,42 @@ public class MainWindow extends JFrame {
             messageUtil = new MessageUtil(this, log);
         }
         return messageUtil;
+    }
+
+    /**
+     * Invoked from ProjectManager when a project is about to be loaded.
+     * We respond to this by adding the remaining cards to our UI, if they
+     * have not already been added.
+     */
+    @Override
+    public void projectWillLoad(Project project) {
+        if (cardListModel.size() > 3) {
+            return; // already done - only do it once
+        }
+        addContentPanel(new KeyPairCard(), "Key management", 2);
+        addContentPanel(new UpdateSourcesCard(), "Update sources", 3);
+        addContentPanel(new VersionManifestCard(), "Version manifest", 4);
+        addContentPanel(new JarSigningCard(), "Jar signing", 5);
+        addContentPanel(new UploadCard(), "Upload", 6);
+    }
+
+    @Override
+    public void projectLoaded(Project project) {
+
+    }
+
+    @Override
+    public void projectSaved(Project project) {
+
+    }
+
+    @Override
+    public void projectClosed(Project project) {
+        // Remove all cards except the first two and the last one:
+        // (Overview, Project, About)
+        while (cardListModel.size() > 3) {
+            cardListModel.remove(cardListModel.size() - 2);
+            contentPanel.remove(contentPanel.getComponent(cardListModel.size()));
+        }
     }
 }

@@ -40,6 +40,7 @@ public class ProjectCard extends JPanel implements ProjectListener {
     private final LabelField projectDirField;
     private final LabelField updateSourcesField;
     private final LabelField versionManifestField;
+    private final JButton closeButton;
 
     public ProjectCard() {
         setLayout(new BorderLayout());
@@ -69,8 +70,14 @@ public class ProjectCard extends JPanel implements ProjectListener {
         btn.setPreferredSize(new Dimension(90, 24));
         btn.addActionListener(e -> showNewProjectDialog());
         buttonPanel.getPanel().add(btn);
-        formPanel.add(buttonPanel);
 
+        closeButton = new JButton("Close");
+        closeButton.setEnabled(false);
+        closeButton.setPreferredSize(new Dimension(90, 24));
+        closeButton.addActionListener(e -> ProjectManager.getInstance().close());
+        buttonPanel.getPanel().add(closeButton);
+
+        formPanel.add(buttonPanel);
         add(formPanel, BorderLayout.CENTER);
 
         ProjectManager.getInstance().addProjectListener(this);
@@ -115,11 +122,20 @@ public class ProjectCard extends JPanel implements ProjectListener {
             catch (IOException ioe) {
                 getMessageUtil().error("Error creating project file: " + ioe.getMessage(), ioe);
             }
-            MainWindow.getInstance().projectOpened();
         }
     }
 
     private void populateFields(Project project) {
+        if (project == null) {
+            projectNameField.setText("N/A");
+            projectDirField.setText("N/A");
+            updateSourcesField.setText("N/A");
+            updateSourcesField.clearHyperlink();
+            versionManifestField.setText("N/A");
+            versionManifestField.clearHyperlink();
+            return;
+        }
+
         projectNameField.setText(project.getName());
         projectDirField.setText(project.getProjectDir().getAbsolutePath());
         String filename = "update_sources.json";
@@ -173,12 +189,27 @@ public class ProjectCard extends JPanel implements ProjectListener {
     }
 
     @Override
+    public void projectWillLoad(Project project) {
+
+    }
+
+    @Override
     public void projectLoaded(Project project) {
         populateFields(project);
+        closeButton.setEnabled(true);
     }
 
     @Override
     public void projectSaved(Project project) {
         populateFields(project);
+    }
+
+    @Override
+    public void projectClosed(Project project) {
+        // Blank out our UI:
+        populateFields(null);
+
+        // Disable the close button:
+        closeButton.setEnabled(false);
     }
 }

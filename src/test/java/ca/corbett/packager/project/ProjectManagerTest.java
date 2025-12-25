@@ -3,6 +3,7 @@ package ca.corbett.packager.project;
 import ca.corbett.extensions.AppExtensionInfo;
 import ca.corbett.updates.VersionManifest;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,12 +19,18 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 class ProjectManagerTest {
 
-    File projectDir;
+    private File projectDir;
+    private static ProjectManager projectManager;
+
+    @BeforeAll
+    public static void initialize() {
+        projectManager = ProjectManager.getInstance();
+    }
 
     @BeforeEach
     public void setup() throws Exception {
         projectDir = new File(System.getProperty("java.io.tmpdir"), "test");
-        ProjectManager.getInstance().newProject("Test", projectDir);
+        projectManager.newProject("Test", projectDir);
     }
 
     @AfterEach
@@ -35,7 +42,7 @@ class ProjectManagerTest {
     public void computeExtensionFilePath_givenValidRoot_shouldResolve() throws Exception {
         final File expected = new File(projectDir, "dist/test.txt");
         String path = "test.txt";
-        File actual = ProjectManager.getInstance().getProjectFileFromPath(path);
+        File actual = projectManager.getProjectFileFromPath(path);
         assertNotNull(actual);
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }
@@ -44,7 +51,7 @@ class ProjectManagerTest {
     public void computeExtensionFilePath_givenValidNonRoot_shouldResolve() throws Exception {
         final File expected = new File(projectDir, "dist/a/b/c/test.txt");
         String path = "a/b/c/test.txt";
-        File actual = ProjectManager.getInstance().computeExtensionFile(null, path);
+        File actual = projectManager.computeExtensionFile(null, path);
         assertNotNull(actual);
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }
@@ -57,7 +64,7 @@ class ProjectManagerTest {
                                    .setTargetAppName("Test")
                                    .setTargetAppVersion("1.0")
                                    .build());
-        File actual = ProjectManager.getInstance().computeExtensionFile(version, "MyExtension-1.0.0.jar");
+        File actual = projectManager.computeExtensionFile(version, "MyExtension-1.0.0.jar");
         assertNotNull(actual);
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }

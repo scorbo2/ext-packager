@@ -206,6 +206,11 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
         appNameField.setText(project.getUpdateSources().getApplicationName());
     }
 
+    @Override
+    public void projectWillLoad(Project project) {
+
+    }
+
     /**
      * We listen for Project events, so that we can load our update sources list from a Project
      * when one is opened.
@@ -218,6 +223,11 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
     @Override
     public void projectSaved(Project project) {
         populateFields(project);
+    }
+
+    @Override
+    public void projectClosed(Project project) {
+
     }
 
     /**

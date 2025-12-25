@@ -294,6 +294,11 @@ public class JarSigningCard extends JPanel implements ProjectListener {
     }
 
     @Override
+    public void projectWillLoad(Project project) {
+
+    }
+
+    @Override
     public void projectLoaded(Project project) {
         reset();
     }
@@ -301,6 +306,11 @@ public class JarSigningCard extends JPanel implements ProjectListener {
     @Override
     public void projectSaved(Project project) {
         reset();
+    }
+
+    @Override
+    public void projectClosed(Project project) {
+
     }
 
     private MessageUtil getMessageUtil() {

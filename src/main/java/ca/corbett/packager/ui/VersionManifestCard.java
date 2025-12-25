@@ -73,6 +73,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     private final ListField<VersionManifest.ExtensionVersion> extensionVersionListField;
     private boolean autoSave = false;
 
+    @SuppressWarnings("unchecked")
     public VersionManifestCard() {
         setLayout(new BorderLayout());
         formPanel = new FormPanel(Alignment.TOP_LEFT);
@@ -88,12 +89,10 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         formPanel.add(appVersionListField);
         formPanel.add(buildAppVersionButtonPanel());
 
-        //noinspection unchecked
         extensionListField = (ListField<VersionManifest.Extension>)buildExtensionListField();
         formPanel.add(extensionListField);
         formPanel.add(buildExtensionButtonPanel());
 
-        //noinspection unchecked
         extensionVersionListField = (ListField<VersionManifest.ExtensionVersion>)buildExtensionVersionListField();
         formPanel.add(extensionVersionListField);
         formPanel.add(buildExtensionVersionButtonPanel());
@@ -346,6 +345,11 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         }
     }
 
+    @Override
+    public void projectWillLoad(Project project) {
+
+    }
+
     /**
      * We listen for project events so that when a project is loaded, we can parse out the
      * version manifest from it and display it here.
@@ -358,6 +362,11 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     @Override
     public void projectSaved(Project project) {
         populateFields(project.getVersionManifest());
+    }
+
+    @Override
+    public void projectClosed(Project project) {
+
     }
 
     /**

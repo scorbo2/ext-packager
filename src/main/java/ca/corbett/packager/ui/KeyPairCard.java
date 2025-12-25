@@ -138,6 +138,11 @@ public class KeyPairCard extends JPanel implements ProjectListener {
         }
     }
 
+    @Override
+    public void projectWillLoad(Project project) {
+
+    }
+
     /**
      * We listen for changes to the currently selected Project - when a project is created
      * or opened, this method is invoked, and we use it to populate our public and private
@@ -151,6 +156,11 @@ public class KeyPairCard extends JPanel implements ProjectListener {
     @Override
     public void projectSaved(Project project) {
         populateFields(project);
+    }
+
+    @Override
+    public void projectClosed(Project project) {
+
     }
 
     private MessageUtil getMessageUtil() {
