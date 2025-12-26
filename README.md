@@ -1,7 +1,13 @@
 # ext-packager
 
 ![ExtPackager](screenshot.jpg "ExtPackager")
-TODO - update screenshto for 1.2 release
+TODO - update screenshot for 1.2 release
+
+## Comprehensive documentation
+
+Refer to the [swing-extras-book](https://www.corbett.ca/swing-extras-book/app-extensions/ExtPackager.html)
+for a full guide to the extension mechanism in swing-extras, and how to use ext-packager.
+Brief documentation is provided below.
 
 ## What is this?
 
