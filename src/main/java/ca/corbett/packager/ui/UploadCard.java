@@ -224,10 +224,8 @@ public class UploadCard extends JPanel implements ProjectListener {
      * is writable.
      */
     private boolean isTargetDirValid(File targetDir) {
-        // Make sure target dir is an actual directory:
-        if (!targetDir.isDirectory()) {
-            getMessageUtil().error("Invalid target directory",
-                                   "The target directory '" + targetDir.getAbsolutePath() + "' is not valid.");
+        if (targetDir == null) {
+            getMessageUtil().error("Invalid target directory", "The target directory is null.");
             return false;
         }
 
@@ -246,6 +244,13 @@ public class UploadCard extends JPanel implements ProjectListener {
                                                + "' could not be created.");
                 return false;
             }
+        }
+
+        // Make sure target dir is an actual directory:
+        if (!targetDir.isDirectory()) {
+            getMessageUtil().error("Invalid target directory",
+                                   "The target directory '" + targetDir.getAbsolutePath() + "' is not a directory.");
+            return false;
         }
 
         // Make sure we can write to the target dir:
