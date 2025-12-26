@@ -160,6 +160,7 @@ public class UploadCard extends JPanel implements ProjectListener {
 
     private void setFileUploadControlsVisible(boolean visible) {
         targetDirField.setVisible(visible);
+        cleanDirBeforeUpload.setCheckBoxText("Clean target directory before copying");
     }
 
     private void setFtpUploadControlsVisible(boolean visible) {
@@ -168,6 +169,7 @@ public class UploadCard extends JPanel implements ProjectListener {
         ftpPasswordField.setVisible(visible);
         ftpTargetDirField.setVisible(visible);
         ftpSaveParamsCheckbox.setVisible(visible);
+        cleanDirBeforeUpload.setCheckBoxText("Clean FTP directory before upload");
     }
 
     private void doUpload() {
