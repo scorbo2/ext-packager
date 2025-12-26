@@ -1,13 +1,19 @@
 # ext-packager
 
 ![ExtPackager](screenshot.jpg "ExtPackager")
-TODO - update screenshto for 1.2 release
+TODO - update screenshot for 1.2 release
+
+## Comprehensive documentation
+
+Refer to the [swing-extras-book](https://www.corbett.ca/swing-extras-book/app-extensions/ExtPackager.html)
+for a full guide to the extension mechanism in swing-extras, and how to use ext-packager.
+Brief documentation is provided below.
 
 ## What is this?
 
 Given the following:
 
-- You have used [swing-extras](https://github.com/scorbo2/swing-extras/) to create a Java application (full documentation available in the [swing-extras-book](https://www.corbett.ca/swing-extras-book/app-extensions/ExtPackager.html)).
+- You have used [swing-extras](https://github.com/scorbo2/swing-extras/) to create a Java application
 - You're using the AppExtension mechanism in swing-extras to allow for dynamically-loaded extensions
 - You want to use the UpdateManager in swing-extras to allow for dynamic extension discovery and download
 
