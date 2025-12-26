@@ -82,6 +82,89 @@ class ProjectManagerTest {
         assertEquals("hello", ProjectManager.getBasename("path/to/hello.txt"));
     }
 
+    @Test
+    public void validateExtInfo_withValidFields_shouldPass() throws Exception {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("1.0.0")
+                .build();
+        projectManager.validateExtInfo(extInfo, "TestApp");
+    }
+
+    @Test
+    public void validateExtInfo_withWrongTargetAppName_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("OtherApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("1.0.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Targets the wrong application: expected \"TestApp\" but found \"OtherApp\"",
+                     exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withBlankName_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("1.0.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Extension name is missing or blank in extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withBlankVersion_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Extension major version is malformed: \"\"", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withBlankTargetAppVersion_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("")
+                .setVersion("1.0.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Target application major version is malformed: \"\"", exception.getMessage());
+    }
+
     private static void deleteDirectoryRecursively(File rootDir) throws IOException {
         Path path = rootDir.toPath();
         if (Files.exists(path)) {

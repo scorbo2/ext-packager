@@ -244,16 +244,16 @@ public class ProjectManager {
                                         + " does not contain extInfo.json - this is not a valid extension jar.");
         }
 
-        // Make sure it targets the expected application:
-        // But only if we were given one to expect:
+        // Ensure validity:
         AppExtensionInfo extInfo = AppExtensionInfo.fromJson(extInfoStr);
-        if (expectedAppName != null) {
-            if (!expectedAppName.equals(extInfo.getTargetAppName())) {
-                throw new Exception("Unable to import Jar file "
-                                            + jarFile.getAbsolutePath()
-                                            + " because it targets the wrong application: "
-                                            + extInfo.getTargetAppName());
-            }
+        try {
+            validateExtInfo(extInfo, expectedAppName);
+        }
+        catch (Exception e) {
+            // Augment the validation error with the jar file name and path:
+            throw new Exception("Error validating extInfo.json from jar file "
+                                        + jarFile.getAbsolutePath()
+                                        + ": " + e.getMessage(), e);
         }
 
         return extInfo;
@@ -342,6 +342,41 @@ public class ProjectManager {
 
         extension.addVersion(extVersion);
         return extVersion;
+    }
+
+    /**
+     * Ensures that all required fields are present with sane values in the given AppExtensionInfo.
+     * If expectedAppName is not null, the targetAppName of the extInfo will be checked against it.
+     * If any field is missing or invalid, an exception is thrown.
+     */
+    protected void validateExtInfo(AppExtensionInfo extInfo, String expectedAppName) throws Exception {
+        // Make sure it targets the expected application:
+        // But only if we were given one to expect:
+        if (expectedAppName != null) {
+            if (!expectedAppName.equals(extInfo.getTargetAppName())) {
+                throw new Exception("Targets the wrong application: expected "
+                                            + "\"" + expectedAppName + "\""
+                                            + " but found "
+                                            + "\"" + extInfo.getTargetAppName() + "\"");
+            }
+        }
+
+        if (extInfo.getMajorVersion() == 0) {
+            throw new Exception("Extension major version is malformed: \""
+                                        + extInfo.getVersion()
+                                        + "\"");
+        }
+        if (extInfo.getTargetAppMajorVersion() == 0) {
+            throw new Exception("Target application major version is malformed: \""
+                                        + extInfo.getTargetAppVersion()
+                                        + "\"");
+        }
+        if (extInfo.getName() == null || extInfo.getName().isBlank()) {
+            throw new Exception("Extension name is missing or blank in extInfo.json.");
+        }
+        if (extInfo.getTargetAppName() == null || extInfo.getTargetAppName().isBlank()) {
+            throw new Exception("Target application name is missing or blank in extInfo.json.");
+        }
     }
 
     /**
