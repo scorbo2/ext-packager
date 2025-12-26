@@ -7,6 +7,7 @@ Version 1.2 [2025-12-31]
   #35 - Additional validation of extInfo on import
   #34 - Add check for target dir existence on local deploy
   #33 - Add link to swing-extras-book from README
+  #30 - Fix wonky label on target dir clean checkbox
 
 Version 1.1 [2025-12-01]
   #28 - add make-installer support
