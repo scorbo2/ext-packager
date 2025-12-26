@@ -256,6 +256,20 @@ public class ProjectManager {
             }
         }
 
+        // Additional extInfo validation:
+        if (extInfo.getMajorVersion() == 0) {
+            throw new Exception("Unable to parse version from extInfo.json in jar file "
+                                        + jarFile.getAbsolutePath()
+                                        + " - major version is missing or invalid: "
+                                        + extInfo.getVersion());
+        }
+        if (extInfo.getTargetAppMajorVersion() == 0) {
+            throw new Exception("Unable to parse target application version from extInfo.json in jar file "
+                                        + jarFile.getAbsolutePath()
+                                        + " - target application major version is missing or invalid: "
+                                        + extInfo.getTargetAppVersion());
+        }
+
         return extInfo;
     }
 
