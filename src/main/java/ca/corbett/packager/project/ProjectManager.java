@@ -1,7 +1,6 @@
 package ca.corbett.packager.project;
 
 import ca.corbett.extensions.AppExtensionInfo;
-import ca.corbett.extras.CoalescingDocumentListener;
 import ca.corbett.extras.io.FileSystemUtil;
 import ca.corbett.updates.VersionManifest;
 
@@ -30,11 +29,12 @@ import static ca.corbett.updates.VersionManifest.ExtensionVersion;
 public class ProjectManager {
 
     private static final Logger log = Logger.getLogger(ProjectManager.class.getName());
+    private static final int DEFERRED_SAVE_TIME_MS = 500;
     private static ProjectManager instance;
 
     private final List<ProjectListener> projectListeners = new ArrayList<>();
     private Project project;
-    private volatile boolean isProjectIOInProgress = false;
+    private boolean isProjectIOInProgress = false;
 
     private ProjectManager() {
 
@@ -58,68 +58,68 @@ public class ProjectManager {
      * Creates a new, empty project with the given name in the given location.
      */
     public void newProject(String name, File projectDir) throws IOException {
-        if (isProjectIOInProgress) {
-            log.warning("Ignoring request to create new project because another project I/O operation is in progress.");
-            return;
-        }
-        isProjectIOInProgress = true;
-        try {
-            // Create the project and give listeners a heads-up that we're about to load it:
-            Project newProject = Project.createNew(name, projectDir);
-            fireProjectWillLoadEvent(newProject);
+        // Create the project and give listeners a heads-up that we're about to load it:
+        Project newProject = Project.createNew(name, projectDir);
+        fireProjectWillLoadEvent(newProject);
 
-            // Now set it and tell listeners it's loaded:
-            project = newProject;
-            fireProjectLoadedEvent(project);
+        // Now set it and tell listeners it's loaded:
+        project = newProject;
+        fireProjectLoadedEvent(project);
 
-            log.info("Created new project: " + project.getName() + " in directory " + projectDir.getAbsolutePath());
-        }
-        finally {
-            startProjectIOTimer();
-        }
+        log.info("Created new project: " + project.getName() + " in directory " + projectDir.getAbsolutePath());
     }
 
     /**
      * Attempts to load the given ext-packager Project from the given project file.
      */
     public void loadProject(File projectFile) throws IOException {
-        if (isProjectIOInProgress) {
-            log.warning("Ignoring request to load project because another project I/O operation is in progress.");
-            return;
-        }
         log.info("Loading project: " + projectFile.getAbsolutePath());
-        isProjectIOInProgress = true;
-        try {
-            // Load the project and give listeners a heads-up that we're about to load it:
-            Project newProject = Project.fromFile(projectFile);
-            fireProjectWillLoadEvent(newProject);
+        // Load the project and give listeners a heads-up that we're about to load it:
+        Project newProject = Project.fromFile(projectFile);
+        fireProjectWillLoadEvent(newProject);
 
-            // Now set it and tell listeners it's loaded:
-            project = newProject;
-            fireProjectLoadedEvent(project);
-        }
-        finally {
-            startProjectIOTimer();
-        }
+        // Now set it and tell listeners it's loaded:
+        project = newProject;
+        fireProjectLoadedEvent(project);
     }
 
     /**
      * Saves any changes to the current Project, if one is open.
      */
     public void save() throws IOException {
-        if (project == null || isProjectIOInProgress) {
-            log.warning("Ignoring request to save project because no project is open, "
-                                + "or because another project I/O operation is in progress.");
+        if (project == null) {
+            log.warning("Ignoring request to save project because no project is open.");
             return;
         }
-        log.info("Saving current project");
+        if (isProjectIOInProgress) {
+            log.warning("Deferred save in progress.");
+            return;
+        }
+
+        // Handle the save asynchronously after a short delay:
         isProjectIOInProgress = true;
+        Timer timer = new Timer(DEFERRED_SAVE_TIME_MS, e -> deferredSave(project));
+        timer.setRepeats(false);
+        timer.start();
+    }
+
+    /**
+     * We defer Project saving by a few hundred milliseconds because
+     * of the way document listeners work - we need to give them time
+     * to process any pending changes before we attempt to save the
+     * Project data.
+     */
+    private void deferredSave(Project projectToSave) {
         try {
-            project.save();
-            fireProjectSavedEvent(project);
+            projectToSave.save();
+            log.info("Project saved: " + projectToSave.getName());
+            fireProjectSavedEvent(projectToSave);
+        }
+        catch (IOException ioe) {
+            log.log(Level.SEVERE, "Error saving project: " + ioe.getMessage(), ioe);
         }
         finally {
-            startProjectIOTimer();
+            isProjectIOInProgress = false;
         }
     }
 
@@ -128,10 +128,6 @@ public class ProjectManager {
      * listeners that the project has been closed.
      */
     public void close() {
-        if (isProjectIOInProgress) {
-            log.warning("Ignoring request to close project because another project I/O operation is in progress.");
-            return;
-        }
         if (project != null) {
             log.info("Closing current project: " + project.getName());
             Project oldProject = project;
@@ -600,18 +596,6 @@ public class ProjectManager {
 
     public void removeProjectListener(ProjectListener listener) {
         projectListeners.remove(listener);
-    }
-
-    /**
-     * Starts a timer that will clear the isLoadInProgress flag after a short delay.
-     * The delay is an unfortunate necessity due to the way the CoalescingDocumentListener
-     * works - we have to give it time to finish processing any pending document changes
-     * that might have been triggered by the load.
-     */
-    private void startProjectIOTimer() {
-        Timer timer = new Timer(CoalescingDocumentListener.DELAY_MS * 2, e -> isProjectIOInProgress = false);
-        timer.setRepeats(false);
-        timer.start();
     }
 
     /**

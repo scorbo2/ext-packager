@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -33,9 +32,6 @@ class ProjectManagerTest {
         // Create a new temporary project directory for each test so the tests don't interfere with each other:
         projectDir = new File(System.getProperty("java.io.tmpdir"), "projectManagerTest_" + System.currentTimeMillis());
         projectManager.newProject("Test", projectDir);
-
-        // Wait for project to be ready (with timeout)
-        waitForProjectReady(5000); // 5 second timeout max
     }
 
     @AfterEach
@@ -99,20 +95,6 @@ class ProjectManagerTest {
                          throw new RuntimeException(e);
                      }
                  });
-        }
-    }
-
-    /**
-     * ProjectManager operations are asynchronous, so wait until the project is open
-     * or timeout.
-     */
-    private void waitForProjectReady(long timeoutMillis) throws Exception {
-        long startTime = System.currentTimeMillis();
-        while (!projectManager.isProjectOpen()) {
-            if (System.currentTimeMillis() - startTime > timeoutMillis) {
-                throw new TimeoutException("Timeout waiting for project to be ready");
-            }
-            Thread.sleep(50);
         }
     }
 }
