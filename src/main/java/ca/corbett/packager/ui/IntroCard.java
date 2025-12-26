@@ -8,6 +8,7 @@ import ca.corbett.forms.Margins;
 import ca.corbett.forms.fields.ComboField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.packager.AppConfig;
+import ca.corbett.packager.HyperlinkUtil;
 import ca.corbett.packager.Version;
 
 import javax.swing.AbstractAction;
@@ -35,10 +36,11 @@ public class IntroCard extends JPanel {
 
         formPanel.add(LabelField.createPlainHeaderLabel("Refer to the project page for full documentation:"));
         LabelField label = new LabelField(Version.PROJECT_URL);
+        final JPanel ownerCard = this;
         label.setHyperlink(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                MainWindow.getInstance().openHyperlink(Version.PROJECT_URL);
+                HyperlinkUtil.openHyperlink(Version.PROJECT_URL, ownerCard);
             }
         });
         label.getMargins().setLeft(48);

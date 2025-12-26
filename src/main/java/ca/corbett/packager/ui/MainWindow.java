@@ -20,12 +20,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
-import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -59,13 +55,11 @@ public class MainWindow extends JFrame implements ProjectListener {
     private DefaultListModel<String> cardListModel;
     private JList<String> cardList;
     private JPanel contentPanel;
-    private final Desktop desktop;
     private File startupProjectFile = null;
     private LinkedHashMap<String, JPanel> cardMap = new LinkedHashMap<>();
 
     private MainWindow() {
         super(Version.APPLICATION_NAME + " " + Version.VERSION);
-        desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
         setSize(new Dimension(700, 520));
         setMinimumSize(new Dimension(500, 400));
         setLayout(new BorderLayout());
@@ -202,34 +196,6 @@ public class MainWindow extends JFrame implements ProjectListener {
         contentPanel = new JPanel();
         contentPanel.setLayout(new CardLayout());
         return contentPanel;
-    }
-
-    /**
-     * Some JREs don't allow launching a hyperlink to open the browser.
-     */
-    public boolean isBrowsingSupported() {
-        return desktop != null && desktop.isSupported(Desktop.Action.BROWSE);
-    }
-
-    /**
-     * If hyperlink launching is supported, will open the user's default browser to the
-     * given link (assuming the link is valid). If the JRE doesn't allow such things,
-     * then the given link will be copied to the clipboard instead (better than nothing).
-     */
-    public void openHyperlink(String link) {
-        if (isBrowsingSupported()) {
-            try {
-                desktop.browse(new URL(link).toURI());
-            }
-            catch (Exception e) {
-                log.warning("Unable to browse URI: " + e.getMessage());
-            }
-        }
-        else {
-            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-            clipboard.setContents(new StringSelection(link), null);
-            getMessageUtil().info("Hyperlinks are not enabled in your JRE.\nLink copied to clipboard instead.");
-        }
     }
 
     /**
