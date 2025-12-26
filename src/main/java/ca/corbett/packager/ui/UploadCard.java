@@ -197,12 +197,15 @@ public class UploadCard extends JPanel implements ProjectListener {
 
         UpdateSources.UpdateSource updateSource = updateSources.get(sourceCombo.getSelectedIndex());
         if (updateSource.getBaseUrl().getProtocol().equalsIgnoreCase("file")) {
-            FileSystemUploadThread worker = new FileSystemUploadThread(project,
-                                                                       new File(targetDirField.getText()),
-                                                                       cleanDirBeforeUpload.isChecked());
-            worker.addProgressListener(new UploadProgressListener());
-            new MultiProgressDialog(MainWindow.getInstance(), "Filesystem upload")
-                    .runWorker(worker, true);
+            File targetDir = new File(targetDirField.getText());
+            if (isTargetDirValid(targetDir)) {
+                FileSystemUploadThread worker = new FileSystemUploadThread(project,
+                                                                           targetDir,
+                                                                           cleanDirBeforeUpload.isChecked());
+                worker.addProgressListener(new UploadProgressListener());
+                new MultiProgressDialog(MainWindow.getInstance(), "Filesystem upload")
+                        .runWorker(worker, true);
+            }
         }
         else {
             FtpUploadThread worker = new FtpUploadThread(project,
@@ -213,6 +216,46 @@ public class UploadCard extends JPanel implements ProjectListener {
             new MultiProgressDialog(MainWindow.getInstance(), "FTP upload")
                     .runWorker(worker, true);
         }
+    }
+
+    /**
+     * Invoked internally during a local filesystem deploy to make sure
+     * that the given target directory exists, is an actual directory, and
+     * is writable.
+     */
+    private boolean isTargetDirValid(File targetDir) {
+        // Make sure target dir is an actual directory:
+        if (!targetDir.isDirectory()) {
+            getMessageUtil().error("Invalid target directory",
+                                   "The target directory '" + targetDir.getAbsolutePath() + "' is not valid.");
+            return false;
+        }
+
+        // Make sure target dir exists, or offer to create it:
+        if (!targetDir.exists()) {
+            if (JOptionPane.showConfirmDialog(MainWindow.getInstance(),
+                                              "Target directory does not exist. Create it and proceed?",
+                                              "Confirm",
+                                              JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) {
+                return false;
+            }
+            if (!targetDir.mkdirs()) {
+                getMessageUtil().error("Cannot create target directory",
+                                       "The target directory '"
+                                               + targetDir.getAbsolutePath()
+                                               + "' could not be created.");
+                return false;
+            }
+        }
+
+        // Make sure we can write to the target dir:
+        if (!targetDir.canWrite()) {
+            getMessageUtil().error("Cannot write to target directory",
+                                   "The target directory '" + targetDir.getAbsolutePath() + "' is not writable.");
+            return false;
+        }
+
+        return true;
     }
 
     private FtpParams buildFtpParams() {
