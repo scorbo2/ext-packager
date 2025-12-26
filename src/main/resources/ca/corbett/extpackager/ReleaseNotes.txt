@@ -2,6 +2,7 @@ ExtPackager Release Notes
 Author: Steve Corbett
 
 Version 1.2 [2025-12-31]
+  #40 - Remove tight UI coupling in ProjectManger
   #38 - Upgrade to swing-extras 2.6
 
 Version 1.1 [2025-12-01]

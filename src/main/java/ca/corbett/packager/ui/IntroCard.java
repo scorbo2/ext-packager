@@ -83,7 +83,7 @@ public class IntroCard extends JPanel {
         footerForm.setBorderMargin(0);
 
         LookAndFeelProperty lafProperty = AppConfig.getInstance().getLookAndFeelProp();
-        //noinspection unchecked
+        @SuppressWarnings("unchecked")
         final ComboField<String> lafCombo = (ComboField<String>)lafProperty.generateFormField();
         lafCombo.addValueChangedListener(field -> {
             LookAndFeelManager.switchLaf(lafProperty.getLafClass(lafCombo.getSelectedIndex()));

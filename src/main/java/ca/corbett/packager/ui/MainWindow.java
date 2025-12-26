@@ -6,6 +6,8 @@ import ca.corbett.extras.image.ImagePanelConfig;
 import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.packager.Version;
+import ca.corbett.packager.project.Project;
+import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
 
 import javax.swing.DefaultListModel;
@@ -28,6 +30,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.LinkedHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,11 +40,20 @@ import java.util.logging.Logger;
  *
  * @author <a href="https://github.com/scorbo2">scorbo2</a>
  */
-public class MainWindow extends JFrame {
+public class MainWindow extends JFrame implements ProjectListener {
 
     private static final Logger log = Logger.getLogger(MainWindow.class.getName());
 
     private static MainWindow instance;
+
+    private static final String CARD_INTRO = "Overview";
+    private static final String CARD_PROJECT = "Project";
+    private static final String CARD_ABOUT = "About";
+    private static final String CARD_KEYPAIR = "Key management";
+    private static final String CARD_UPDATE_SOURCES = "Update sources";
+    private static final String CARD_VERSION_MANIFEST = "Version manifest";
+    private static final String CARD_JAR_SIGNING = "Jar signing";
+    private static final String CARD_UPLOAD = "Upload";
 
     private MessageUtil messageUtil;
     private DefaultListModel<String> cardListModel;
@@ -49,6 +61,7 @@ public class MainWindow extends JFrame {
     private JPanel contentPanel;
     private final Desktop desktop;
     private File startupProjectFile = null;
+    private LinkedHashMap<String, JPanel> cardMap = new LinkedHashMap<>();
 
     private MainWindow() {
         super(Version.APPLICATION_NAME + " " + Version.VERSION);
@@ -61,24 +74,21 @@ public class MainWindow extends JFrame {
         splitPane.setOneTouchExpandable(false);
         splitPane.setDividerLocation(195);
         add(splitPane, BorderLayout.CENTER);
-        addContentPanel(new IntroCard(), "Overview");
-        addContentPanel(new ProjectCard(), "Project");
-        addContentPanel(new AboutCard(), "About");
-        cardList.setSelectedIndex(0);
-    }
 
-    /**
-     * Adds the remaining options to our menu now that a project is selected.
-     */
-    public void projectOpened() {
-        if (cardListModel.size() > 3) {
-            return; // already done - only do it once
-        }
-        addContentPanel(new KeyPairCard(), "Key management", 2);
-        addContentPanel(new UpdateSourcesCard(), "Update sources", 3);
-        addContentPanel(new VersionManifestCard(), "Version manifest", 4);
-        addContentPanel(new JarSigningCard(), "Jar signing", 5);
-        addContentPanel(new UploadCard(), "Upload", 6);
+        cardMap = new LinkedHashMap<>();
+        cardMap.put(CARD_INTRO, new IntroCard());
+        cardMap.put(CARD_PROJECT, new ProjectCard());
+        cardMap.put(CARD_KEYPAIR, new KeyPairCard());
+        cardMap.put(CARD_UPDATE_SOURCES, new UpdateSourcesCard());
+        cardMap.put(CARD_VERSION_MANIFEST, new VersionManifestCard());
+        cardMap.put(CARD_JAR_SIGNING, new JarSigningCard());
+        cardMap.put(CARD_UPLOAD, new UploadCard());
+        cardMap.put(CARD_ABOUT, new AboutCard());
+
+        addContentPanel(cardMap.get(CARD_INTRO), CARD_INTRO);
+        addContentPanel(cardMap.get(CARD_PROJECT), CARD_PROJECT);
+        addContentPanel(cardMap.get(CARD_ABOUT), CARD_ABOUT);
+        cardList.setSelectedIndex(0);
     }
 
     /**
@@ -92,6 +102,7 @@ public class MainWindow extends JFrame {
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(true);
+        ProjectManager.getInstance().addProjectListener(this);
         if (startupProjectFile != null) {
             try {
                 ProjectManager.getInstance().loadProject(startupProjectFile);
@@ -109,10 +120,19 @@ public class MainWindow extends JFrame {
         return instance;
     }
 
+    /**
+     * Invoked internally to add the given panel as a new card in the content area,
+     * using the given title as the menu link in our list on the left.
+     */
     private void addContentPanel(JPanel panel, String title) {
         addContentPanel(panel, title, -1);
     }
 
+    /**
+     * Invoked internally to add the given panel as a new card in the content area,
+     * using the given title as the menu link in our list on the left, at the
+     * specified index (or at the end if index is -1).
+     */
     private void addContentPanel(JPanel panel, String title, int index) {
         if (index == -1) {
             cardListModel.addElement("  " + title);
@@ -121,6 +141,17 @@ public class MainWindow extends JFrame {
             cardListModel.insertElementAt("  " + title, index);
         }
         contentPanel.add(PropertiesDialog.buildScrollPane(panel), title);
+    }
+
+    /**
+     * Invoked internally to remove the given item from our menu list and content area.
+     */
+    private void removeContentPanel(String title) {
+        int index = cardListModel.indexOf("  " + title);
+        if (index != -1) {
+            cardListModel.remove(index);
+            contentPanel.remove(contentPanel.getComponent(index));
+        }
     }
 
     private JPanel buildMenuPanel() {
@@ -239,5 +270,42 @@ public class MainWindow extends JFrame {
             messageUtil = new MessageUtil(this, log);
         }
         return messageUtil;
+    }
+
+    /**
+     * Invoked from ProjectManager when a project is about to be loaded.
+     * We respond to this by adding the remaining cards to our UI, if they
+     * have not already been added.
+     */
+    @Override
+    public void projectWillLoad(Project project) {
+        if (cardListModel.size() > 3) {
+            return; // already done - only do it once
+        }
+        addContentPanel(cardMap.get(CARD_KEYPAIR), CARD_KEYPAIR, 2);
+        addContentPanel(cardMap.get(CARD_UPDATE_SOURCES), CARD_UPDATE_SOURCES, 3);
+        addContentPanel(cardMap.get(CARD_VERSION_MANIFEST), CARD_VERSION_MANIFEST, 4);
+        addContentPanel(cardMap.get(CARD_JAR_SIGNING), CARD_JAR_SIGNING, 5);
+        addContentPanel(cardMap.get(CARD_UPLOAD), CARD_UPLOAD, 6);
+    }
+
+    @Override
+    public void projectLoaded(Project project) {
+
+    }
+
+    @Override
+    public void projectSaved(Project project) {
+
+    }
+
+    @Override
+    public void projectClosed(Project project) {
+        // Remove all the project-specific cards:
+        removeContentPanel(CARD_KEYPAIR);
+        removeContentPanel(CARD_UPDATE_SOURCES);
+        removeContentPanel(CARD_VERSION_MANIFEST);
+        removeContentPanel(CARD_JAR_SIGNING);
+        removeContentPanel(CARD_UPLOAD);
     }
 }

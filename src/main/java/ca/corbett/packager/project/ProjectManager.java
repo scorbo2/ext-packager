@@ -1,9 +1,7 @@
 package ca.corbett.packager.project;
 
 import ca.corbett.extensions.AppExtensionInfo;
-import ca.corbett.extras.CoalescingDocumentListener;
 import ca.corbett.extras.io.FileSystemUtil;
-import ca.corbett.packager.ui.MainWindow;
 import ca.corbett.updates.VersionManifest;
 
 import javax.swing.Timer;
@@ -31,12 +29,12 @@ import static ca.corbett.updates.VersionManifest.ExtensionVersion;
 public class ProjectManager {
 
     private static final Logger log = Logger.getLogger(ProjectManager.class.getName());
+    private static final int DEFERRED_SAVE_TIME_MS = 500;
     private static ProjectManager instance;
 
     private final List<ProjectListener> projectListeners = new ArrayList<>();
     private Project project;
-    private boolean isSaveInProgress = false;
-    private boolean isLoadInProgress = false;
+    private boolean isProjectIOInProgress = false;
 
     private ProjectManager() {
 
@@ -60,52 +58,95 @@ public class ProjectManager {
      * Creates a new, empty project with the given name in the given location.
      */
     public void newProject(String name, File projectDir) throws IOException {
-        project = Project.createNew(name, projectDir);
-        MainWindow.getInstance().projectOpened();
+        // Create the project and give listeners a heads-up that we're about to load it:
+        Project newProject = Project.createNew(name, projectDir);
+        fireProjectWillLoadEvent(newProject);
+
+        // Now set it and tell listeners it's loaded:
+        project = newProject;
         fireProjectLoadedEvent(project);
+
+        log.info("Created new project: " + project.getName() + " in directory " + projectDir.getAbsolutePath());
     }
 
     /**
      * Attempts to load the given ext-packager Project from the given project file.
      */
     public void loadProject(File projectFile) throws IOException {
-        if (isLoadInProgress) {
-            return;
-        }
         log.info("Loading project: " + projectFile.getAbsolutePath());
-        isLoadInProgress = true;
-        try {
-            project = Project.fromFile(projectFile);
-            MainWindow.getInstance().projectOpened();
-            fireProjectLoadedEvent(project);
-        }
-        finally {
-            // Extremely cheesy, but we have to wait for coalescing doc listeners to finish responding to the save.
-            Timer timer = new Timer(CoalescingDocumentListener.DELAY_MS * 2, e -> isLoadInProgress = false);
-            timer.setRepeats(false);
-            timer.start();
-        }
+        // Load the project and give listeners a heads-up that we're about to load it:
+        Project newProject = Project.fromFile(projectFile);
+        fireProjectWillLoadEvent(newProject);
+
+        // Now set it and tell listeners it's loaded:
+        project = newProject;
+        fireProjectLoadedEvent(project);
     }
 
     /**
      * Saves any changes to the current Project, if one is open.
      */
     public void save() throws IOException {
-        if (project == null || isSaveInProgress || isLoadInProgress) {
+        if (project == null) {
+            log.warning("Ignoring request to save project because no project is open.");
             return;
         }
-        log.info("Saving current project");
-        isSaveInProgress = true;
+        if (isProjectIOInProgress) {
+            log.warning("Deferred save in progress.");
+            return;
+        }
+
+        // Handle the save asynchronously after a short delay:
+        isProjectIOInProgress = true;
+        Timer timer = new Timer(DEFERRED_SAVE_TIME_MS, e -> deferredSave(project));
+        timer.setRepeats(false);
+        timer.start();
+    }
+
+    /**
+     * We defer Project saving by a few hundred milliseconds because
+     * of the way document listeners work - we need to give them time
+     * to process any pending changes before we attempt to save the
+     * Project data.
+     */
+    private void deferredSave(Project projectToSave) {
         try {
-            project.save();
-            fireProjectSavedEvent(project);
+            projectToSave.save();
+            log.info("Project saved: " + projectToSave.getName());
+            fireProjectSavedEvent(projectToSave);
+        }
+        catch (IOException ioe) {
+            log.log(Level.SEVERE, "Error saving project: " + ioe.getMessage(), ioe);
         }
         finally {
-            // Extremely cheesy, but we have to wait for coalescing doc listeners to finish responding to the save.
-            Timer timer = new Timer(CoalescingDocumentListener.DELAY_MS * 2, e -> isSaveInProgress = false);
-            timer.setRepeats(false);
-            timer.start();
+            isProjectIOInProgress = false;
         }
+    }
+
+    /**
+     * Closes the current project (if one is loaded), and notifies
+     * listeners that the project has been closed.
+     */
+    public void close() {
+        if (project != null) {
+            log.info("Closing current project: " + project.getName());
+            Project oldProject = project;
+            project = null;
+            List<ProjectListener> copy = new ArrayList<>(projectListeners);
+            for (ProjectListener listener : copy) {
+                listener.projectClosed(oldProject);
+            }
+        }
+        else {
+            log.warning("Ignoring request to close project because no project is currently open.");
+        }
+    }
+
+    /**
+     * Reports whether a Project is currently open.
+     */
+    public boolean isProjectOpen() {
+        return project != null && !isProjectIOInProgress;
     }
 
     /**
@@ -557,6 +598,20 @@ public class ProjectManager {
         projectListeners.remove(listener);
     }
 
+    /**
+     * Notify listeners that we're about to load the given Project.
+     * This is intended for callers who need to know before the load actually happens.
+     */
+    private void fireProjectWillLoadEvent(Project project) {
+        List<ProjectListener> copy = new ArrayList<>(projectListeners);
+        for (ProjectListener listener : copy) {
+            listener.projectWillLoad(project);
+        }
+    }
+
+    /**
+     * Notify listeners that the given Project has just been loaded into this ProjectManager instance.
+     */
     private void fireProjectLoadedEvent(Project project) {
         List<ProjectListener> copy = new ArrayList<>(projectListeners);
         for (ProjectListener listener : copy) {
@@ -564,6 +619,9 @@ public class ProjectManager {
         }
     }
 
+    /**
+     * Notify listeners that the given Project has just been persisted.
+     */
     private void fireProjectSavedEvent(Project project) {
         List<ProjectListener> copy = new ArrayList<>(projectListeners);
         for (ProjectListener listener : copy) {

@@ -186,38 +186,57 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
     }
 
     private void populateFields(Project project) {
-        // Dumb initial value in case the proper application name is not set:
-        if (project == null || project.getUpdateSources() == null) {
-            appNameField.setText("");
-        }
+        // Blank out our current values:
+        appNameField.setText("");
+        sourcesListField.getListModel().clear();
 
-        DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
-        listModel.clear();
-
+        // If there's no project or no update sources, we're done:
         if (project == null || project.getUpdateSources() == null) {
             return;
         }
 
+        // Populate our update sources list:
         for (UpdateSources.UpdateSource updateSource : project.getUpdateSources().getUpdateSources()) {
-            listModel.addElement(updateSource);
+            sourcesListField.getListModel().addElement(updateSource);
         }
 
-        // Now we can set a more intelligent default value for application name:
+        // Populate our application name:
         appNameField.setText(project.getUpdateSources().getApplicationName());
     }
 
     /**
-     * We listen for Project events, so that we can load our update sources list from a Project
-     * when one is opened.
+     * Fired just before a Project is loaded - we don't need to do anything here.
+     */
+    @Override
+    public void projectWillLoad(Project ignored) {
+        // No action needed
+    }
+
+    /**
+     * Fired when a Project is loaded - we update our fields to reflect the current project's update sources.
      */
     @Override
     public void projectLoaded(Project project) {
         populateFields(project);
     }
 
+    /**
+     * Fired when a Project is saved - we update our fields to reflect any changes.
+     *
+     * @param project
+     */
     @Override
     public void projectSaved(Project project) {
         populateFields(project);
+    }
+
+    /**
+     * Fired when the current Project is closed - we blank out our fields.
+     * @param project
+     */
+    @Override
+    public void projectClosed(Project project) {
+        populateFields(null);
     }
 
     /**
