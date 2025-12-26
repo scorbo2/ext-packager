@@ -7,7 +7,7 @@ TODO - update screenshto for 1.2 release
 
 Given the following:
 
-- You have used [swing-extras](https://github.com/scorbo2/swing-extras/) to create a Java application
+- You have used [swing-extras](https://github.com/scorbo2/swing-extras/) to create a Java application (full documentation available in the [swing-extras-book](https://www.corbett.ca/swing-extras-book/app-extensions/ExtPackager.html)).
 - You're using the AppExtension mechanism in swing-extras to allow for dynamically-loaded extensions
 - You want to use the UpdateManager in swing-extras to allow for dynamic extension discovery and download
 
