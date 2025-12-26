@@ -5,6 +5,7 @@ Version 1.2 [2025-12-31]
   #40 - Remove tight UI coupling in ProjectManager
   #38 - Upgrade to swing-extras 2.6
   #35 - Additional validation of extInfo on import
+  #34 - Add check for target dir existence on local deploy
 
 Version 1.1 [2025-12-01]
   #28 - add make-installer support
