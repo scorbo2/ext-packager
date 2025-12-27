@@ -92,7 +92,7 @@ public class ProjectManager {
             return;
         }
         if (isProjectIOInProgress) {
-            log.warning("Deferred save in progress.");
+            log.fine("Deferred save in progress.");
             return;
         }
 
@@ -413,8 +413,11 @@ public class ProjectManager {
             return; // wonky case but this may not be set if the json is invalid
         }
         String jarPath = extensionVersion.getDownloadPath();
-        Files.delete(new File(parentDir, jarPath).toPath());
-        File signatureFile = new File(parentDir, getBasename(jarPath) + ".sig");
+        File jarFile = new File(parentDir, jarPath);
+        if (jarFile.exists()) {
+            Files.delete(jarFile.toPath());
+        }
+        File signatureFile = new File(parentDir, switchExtension(jarPath, "sig"));
         if (signatureFile.exists()) {
             Files.delete(signatureFile.toPath());
         }
@@ -607,6 +610,26 @@ public class ProjectManager {
         }
 
         return withoutExtension;
+    }
+
+    /**
+     * Returns the given filename with its extension switched to the given new extension,
+     * while leaving any path elements intact.
+     * For example, switchExtension("a/b/c.txt", "jar") returns "a/b/c.jar".
+     */
+    public static String switchExtension(String filename, String newExtension) {
+        if (filename == null || filename.isBlank()) {
+            return filename;
+        }
+        int index = filename.lastIndexOf(".");
+        String withoutExtension;
+        if (index == -1) {
+            withoutExtension = filename;
+        }
+        else {
+            withoutExtension = filename.substring(0, index);
+        }
+        return withoutExtension + "." + newExtension;
     }
 
     public List<File> findAllJars(Project project) {
