@@ -165,6 +165,66 @@ public class ProjectManagerTest {
         assertEquals("Target application major version is malformed: \"\"", exception.getMessage());
     }
 
+    @Test
+    public void switchExtension_withValidExtension_shouldSucceed() throws Exception {
+        // GIVEN a file path with a valid extension:
+        final String filePath = "extensions/MyExtension-1.0.0.jar";
+
+        // WHEN switching the extension to "zip":
+        final String newFilePath = projectManager.switchExtension(filePath, "zip");
+
+        // THEN the new file path should have the "zip" extension:
+        assertEquals("extensions/MyExtension-1.0.0.zip", newFilePath);
+    }
+
+    @Test
+    public void switchExtension_withoutExtension_shouldAddNewExtension() throws Exception {
+        // GIVEN a file path without an extension:
+        final String filePath = "extensions/MyExtension";
+
+        // WHEN switching the extension to "jar":
+        final String newFilePath = projectManager.switchExtension(filePath, "jar");
+
+        // THEN the new file path should have the "jar" extension:
+        assertEquals("extensions/MyExtension.jar", newFilePath);
+    }
+
+    @Test
+    public void switchExtension_withMultipleExtensions_shouldReplaceLastExtension() throws Exception {
+        // GIVEN a file path with multiple extensions:
+        final String filePath = "extensions/My.Extension.Name-1.0.0.tar.gz";
+
+        // WHEN switching the extension to "zip":
+        final String newFilePath = projectManager.switchExtension(filePath, "zip");
+
+        // THEN the new file path should have the "zip" extension:
+        assertEquals("extensions/My.Extension.Name-1.0.0.tar.zip", newFilePath);
+    }
+
+    @Test
+    public void switchExtension_withDotInPathButNotInFilename_shouldAddExtensionCorrectly() throws Exception {
+        // GIVEN a file path with a dot in the directory path but not in the filename:
+        final String filePath = "extensions/v1.0/MyExtension";
+
+        // WHEN switching the extension to "jar":
+        final String newFilePath = projectManager.switchExtension(filePath, "jar");
+
+        // THEN the new file path should have the "jar" extension:
+        assertEquals("extensions/v1.0/MyExtension.jar", newFilePath);
+    }
+
+    @Test
+    public void switchExtension_withNoExtension_shouldAddExtension() throws Exception {
+        // GIVEN a file path with no extension:
+        final String filePath = "extensions/MyExtension";
+
+        // WHEN switching the extension to "zip":
+        final String newFilePath = projectManager.switchExtension(filePath, "zip");
+
+        // THEN the new file path should have the "zip" extension:
+        assertEquals("extensions/MyExtension.zip", newFilePath);
+    }
+
     public static void deleteDirectoryRecursively(File rootDir) throws IOException {
         Path path = rootDir.toPath();
         if (Files.exists(path)) {

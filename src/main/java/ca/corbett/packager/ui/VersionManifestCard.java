@@ -163,9 +163,8 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             return;
         }
 
-        DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
-        VersionManifest.ApplicationVersion appVersion = listModel.getElementAt(selectedIndex);
-        listModel.removeElementAt(selectedIndex);
+        VersionManifest.ApplicationVersion appVersion = appVersionListField.getListModel().getElementAt(selectedIndex);
+        appVersionListField.getListModel().removeElementAt(selectedIndex);
         try {
             ProjectManager.getInstance().removeApplicationVersion(appVersion); // file cleanup
         }
