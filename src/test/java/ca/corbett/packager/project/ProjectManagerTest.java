@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class ProjectManagerTest {
+public class ProjectManagerTest {
 
     private File projectDir;
     private static ProjectManager projectManager;
@@ -165,7 +165,7 @@ class ProjectManagerTest {
         assertEquals("Target application major version is malformed: \"\"", exception.getMessage());
     }
 
-    private static void deleteDirectoryRecursively(File rootDir) throws IOException {
+    public static void deleteDirectoryRecursively(File rootDir) throws IOException {
         Path path = rootDir.toPath();
         if (Files.exists(path)) {
             Files.walk(path)
