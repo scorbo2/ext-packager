@@ -4,6 +4,7 @@ import ca.corbett.extras.MessageUtil;
 import ca.corbett.extras.PopupTextDialog;
 import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.io.FileSystemUtil;
+import ca.corbett.extras.io.HyperlinkUtil;
 import ca.corbett.extras.properties.PropertiesDialog;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
@@ -84,10 +85,11 @@ public class ExtensionVersionDialog extends JDialog {
         if (author != null && !author.isBlank()) {
             LabelField labelField = new LabelField("Author:", author);
             if (authorUrl != null && !authorUrl.isBlank()) {
+                final JDialog owner = this;
                 labelField.setHyperlink(new AbstractAction() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        MainWindow.getInstance().openHyperlink(authorUrl);
+                        HyperlinkUtil.openHyperlink(authorUrl, owner);
                     }
                 });
             }

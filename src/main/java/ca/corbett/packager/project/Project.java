@@ -24,8 +24,8 @@ import java.util.logging.Logger;
  * So, a good convention is to name the project after the application in question,
  * but this is not enforced.
  * <p>
- *     The singleton ProjectManager class provides handy wrappers around this stuff so that
- *     callers can always get access to the currently loaded Project.
+ * The ProjectManager class provides access to a loaded Project so that
+ * callers can more easily modify and persist a Project instance.
  * </p>
  *
  * @author <a href="https://github.com/scorbo2">scorbo2</a>

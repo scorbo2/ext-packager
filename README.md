@@ -1,6 +1,13 @@
 # ext-packager
 
 ![ExtPackager](screenshot.jpg "ExtPackager")
+TODO - update screenshot for 1.2 release
+
+## Comprehensive documentation
+
+Refer to the [swing-extras-book](https://www.corbett.ca/swing-extras-book/app-extensions/ExtPackager.html)
+for a full guide to the extension mechanism in swing-extras, and how to use ext-packager.
+Brief documentation is provided below.
 
 ## What is this?
 
@@ -66,7 +73,5 @@ the user that an upgrade is available. (Application self-update not yet supporte
 ext-packager is made available under the MIT license: https://opensource.org/license/mit
 
 ## Revision history
-
-2025-11-02: Initial release.
 
 [Full release notes and version history](src/main/resources/ca/corbett/extpackager/ReleaseNotes.txt)

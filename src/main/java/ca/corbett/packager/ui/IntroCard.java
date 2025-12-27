@@ -1,6 +1,7 @@
 package ca.corbett.packager.ui;
 
 import ca.corbett.extras.LookAndFeelManager;
+import ca.corbett.extras.io.HyperlinkUtil;
 import ca.corbett.extras.properties.LookAndFeelProperty;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
@@ -35,10 +36,11 @@ public class IntroCard extends JPanel {
 
         formPanel.add(LabelField.createPlainHeaderLabel("Refer to the project page for full documentation:"));
         LabelField label = new LabelField(Version.PROJECT_URL);
+        final JPanel ownerCard = this;
         label.setHyperlink(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                MainWindow.getInstance().openHyperlink(Version.PROJECT_URL);
+                HyperlinkUtil.openHyperlink(Version.PROJECT_URL, ownerCard);
             }
         });
         label.getMargins().setLeft(48);
@@ -83,7 +85,7 @@ public class IntroCard extends JPanel {
         footerForm.setBorderMargin(0);
 
         LookAndFeelProperty lafProperty = AppConfig.getInstance().getLookAndFeelProp();
-        //noinspection unchecked
+        @SuppressWarnings("unchecked")
         final ComboField<String> lafCombo = (ComboField<String>)lafProperty.generateFormField();
         lafCombo.addValueChangedListener(field -> {
             LookAndFeelManager.switchLaf(lafProperty.getLafClass(lafCombo.getSelectedIndex()));

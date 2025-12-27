@@ -14,6 +14,9 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -34,14 +37,17 @@ public class UpdateSourceDialog extends JDialog {
     private LabelField manifestField;
     private LabelField publicKeyField;
     private LabelField extensionsDirField;
+    private final JScrollPane scrollPane;
 
     public UpdateSourceDialog(String title) {
         super(MainWindow.getInstance(), title, true);
         setSize(new Dimension(600, 270));
-        setResizable(false);
+        setMinimumSize(new Dimension(500, 270));
+        setResizable(true);
         setLocationRelativeTo(MainWindow.getInstance());
         setLayout(new BorderLayout());
-        add(PropertiesDialog.buildScrollPane(buildFormPanel()), BorderLayout.CENTER);
+        scrollPane = PropertiesDialog.buildScrollPane(buildFormPanel());
+        add(scrollPane, BorderLayout.CENTER);
         add(buildButtonPanel(), BorderLayout.SOUTH);
     }
 
@@ -87,6 +93,12 @@ public class UpdateSourceDialog extends JDialog {
 
     private void buttonHandler(boolean okay) {
         if (okay && !formPanel.isFormValid()) {
+            // Scroll to the far right so that the validation icon is visible:
+            // (otherwise it's not obvious why the OK button seemed to do nothing!)
+            SwingUtilities.invokeLater(() -> {
+                JScrollBar horizontalBar = scrollPane.getHorizontalScrollBar();
+                horizontalBar.setValue(horizontalBar.getMaximum() - horizontalBar.getVisibleAmount());
+            });
             return;
         }
         wasOkayed = okay;
