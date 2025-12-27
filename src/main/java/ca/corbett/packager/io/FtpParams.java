@@ -27,17 +27,28 @@ public class FtpParams {
     public String targetDir;
 
     /**
+     * Factory method to return an empty FtpParams instance.
+     */
+    public static FtpParams of() {
+        FtpParams params = new FtpParams();
+        params.host = "";
+        params.username = "";
+        params.password = "";
+        params.targetDir = "";
+        return params;
+    }
+
+    /**
      * Attempts to load the saved FtpParams for the given Project and UpdateSource.
-     * If none are found, a new (empty) FtpParams object is created on disk and returned.
+     * Returns an empty FtpParams instance if nothing is saved for this Project and UpdateSource.
      */
     public static FtpParams fromUpdateSource(Project project, UpdateSources.UpdateSource source) throws IOException {
-        FileBasedProperties props = getPropsInstance(project, source);
-        FtpParams params = new FtpParams();
-        params.host = props.getString(PROP_HOST, "");
-        params.username = props.getString(PROP_USERNAME, "");
-        params.password = props.getString(PROP_PASSWORD, "");
-        params.targetDir = props.getString(PROP_TARGET_DIR, "");
-        return params;
+        if (ftpParamsExist(project, source)) {
+            return load(project, source);
+        }
+
+        // Otherwise, create a new empty one:
+        return of();
     }
 
     /**
@@ -45,7 +56,7 @@ public class FtpParams {
      * This will update the props file if it exists, or create a new one if it doesn't.
      */
     public static void save(Project project, UpdateSources.UpdateSource source, FtpParams params) throws IOException {
-        FileBasedProperties props = getPropsInstance(project, source);
+        FileBasedProperties props = new FileBasedProperties(getPropsFile(project, source));
         props.setString(PROP_HOST, params.host);
         props.setString(PROP_USERNAME, params.username);
         props.setString(PROP_PASSWORD, params.password);
@@ -61,23 +72,24 @@ public class FtpParams {
     }
 
     /**
-     * Gets the FileBasedProperties instance for the given Project and UpdateSource, or creates
-     * one if it doesn't exist yet.
+     * Invoked internally to load the FtpParams from the props file for the given
+     * Project and UpdateSource. Will create a new props file with blank values if none exists.
      */
-    protected static FileBasedProperties getPropsInstance(Project project, UpdateSources.UpdateSource source)
-            throws IOException {
-        FileBasedProperties props = new FileBasedProperties(getPropsFile(project, source));
-        if (!ftpParamsExist(project, source)) {
-            props.setString(PROP_HOST, "");
-            props.setString(PROP_USERNAME, "");
-            props.setString(PROP_PASSWORD, "");
-            props.setString(PROP_TARGET_DIR, "");
-            props.saveWithoutException();
+    protected static FtpParams load(Project project, UpdateSources.UpdateSource source) throws IOException {
+        File propsFile = getPropsFile(project, source);
+        if (!propsFile.exists()) {
+            FtpParams params = of();
+            save(project, source, params);
+            return params;
         }
-        else {
-            props.load();
-        }
-        return props;
+        FileBasedProperties props = new FileBasedProperties(propsFile);
+        props.load();
+        FtpParams params = new FtpParams();
+        params.host = props.getString(PROP_HOST, "");
+        params.username = props.getString(PROP_USERNAME, "");
+        params.password = props.getString(PROP_PASSWORD, "");
+        params.targetDir = props.getString(PROP_TARGET_DIR, "");
+        return params;
     }
 
     /**
@@ -90,7 +102,7 @@ public class FtpParams {
      * but it should be pretty close.
      * </p>
      */
-    private static File getPropsFile(Project project, UpdateSources.UpdateSource source) {
+    protected static File getPropsFile(Project project, UpdateSources.UpdateSource source) {
         return new File(project.getProjectDir(), FileSystemUtil.sanitizeFilename(source.getName()) + ".props");
     }
 }

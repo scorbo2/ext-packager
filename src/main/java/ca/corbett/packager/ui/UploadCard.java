@@ -144,21 +144,23 @@ public class UploadCard extends JPanel implements ProjectListener {
             setFileUploadControlsVisible(true);
             try {
                 targetDirField.setText(new File(updateSource.getBaseUrl().toURI()).getAbsolutePath());
+            }
+            catch (URISyntaxException | IllegalArgumentException e) {
+                targetDirField.setText("(invalid base URL)");
+            }
+        }
+        else {
+            setFtpUploadControlsVisible(true);
+            try {
                 FtpParams ftpParams = FtpParams.fromUpdateSource(project, updateSource);
                 ftpHostField.setText(ftpParams.host);
                 ftpUsernameField.setText(ftpParams.username);
                 ftpPasswordField.setPassword(ftpParams.password);
                 ftpTargetDirField.setText(ftpParams.targetDir);
             }
-            catch (URISyntaxException | IllegalArgumentException e) {
-                targetDirField.setText("(invalid base URL)");
-            }
             catch (IOException ioe) {
                 log.warning("Unable to load saved FTP params: " + ioe.getMessage());
             }
-        }
-        else {
-            setFtpUploadControlsVisible(true);
         }
 
         formPanel.validateForm(); // revalidate form as visible controls may have changed.
@@ -279,13 +281,12 @@ public class UploadCard extends JPanel implements ProjectListener {
         params.password = ftpPasswordField.getPassword();
 
         // Save all ftp props if directed, or blank them out otherwise:
-        if (ftpSaveParamsCheckbox.isChecked()) {
-            try {
-                FtpParams.save(project, source, params);
-            }
-            catch (IOException ioe) {
-                log.warning("Unable to save FTP params: " + ioe.getMessage());
-            }
+        // (this means we nuke the saved settings if the user unchecks the box)
+        try {
+            FtpParams.save(project, source, ftpSaveParamsCheckbox.isChecked() ? params : FtpParams.of());
+        }
+        catch (IOException ioe) {
+            log.warning("Unable to save FTP params: " + ioe.getMessage());
         }
 
         return params;
