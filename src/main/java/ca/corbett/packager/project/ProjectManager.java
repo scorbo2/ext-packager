@@ -616,18 +616,25 @@ public class ProjectManager {
      * Returns the given filename with its extension switched to the given new extension,
      * while leaving any path elements intact.
      * For example, switchExtension("a/b/c.txt", "jar") returns "a/b/c.jar".
+     * If the input file had no extension, the new extension is simply appended.
      */
     public static String switchExtension(String filename, String newExtension) {
         if (filename == null || filename.isBlank()) {
             return filename;
         }
-        int index = filename.lastIndexOf(".");
+        // Find the last path separator to isolate the filename from the path
+        int lastSeparator = filename.lastIndexOf("/");
+
+        // Look for the extension only in the filename portion (after the last separator)
+        int extensionIndex = filename.lastIndexOf(".");
+
         String withoutExtension;
-        if (index == -1) {
+        if (extensionIndex == -1 || extensionIndex < lastSeparator) {
+            // No extension found, or the dot is in the directory path, not the filename
             withoutExtension = filename;
         }
         else {
-            withoutExtension = filename.substring(0, index);
+            withoutExtension = filename.substring(0, extensionIndex);
         }
         return withoutExtension + "." + newExtension;
     }
