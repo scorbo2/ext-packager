@@ -1,6 +1,7 @@
 package ca.corbett.packager.ui;
 
 import ca.corbett.extras.LookAndFeelManager;
+import ca.corbett.extras.io.HyperlinkUtil;
 import ca.corbett.extras.properties.LookAndFeelProperty;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
@@ -8,7 +9,6 @@ import ca.corbett.forms.Margins;
 import ca.corbett.forms.fields.ComboField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.packager.AppConfig;
-import ca.corbett.packager.HyperlinkUtil;
 import ca.corbett.packager.Version;
 
 import javax.swing.AbstractAction;
