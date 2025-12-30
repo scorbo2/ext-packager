@@ -126,7 +126,7 @@ public class ProjectManagerTest {
             exception = e;
         }
         assertNotNull(exception);
-        assertEquals("Extension name is missing or blank in extInfo.json.", exception.getMessage());
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
     }
 
     @Test
@@ -144,7 +144,7 @@ public class ProjectManagerTest {
             exception = e;
         }
         assertNotNull(exception);
-        assertEquals("Extension major version is malformed: \"\"", exception.getMessage());
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
     }
 
     @Test
@@ -162,7 +162,61 @@ public class ProjectManagerTest {
             exception = e;
         }
         assertNotNull(exception);
-        assertEquals("Target application major version is malformed: \"\"", exception.getMessage());
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withBlankTargetAppName_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("")
+                .setTargetAppVersion("1.0")
+                .setVersion("1.0.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withMalformedVersion_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("That ain't no version string!")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withMalformedTargetAppVersion_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("That ain't no version string!")
+                .setVersion("1.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
     }
 
     @Test

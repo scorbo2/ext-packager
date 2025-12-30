@@ -2,6 +2,7 @@ ExtPackager Release Notes
 Author: Steve Corbett
 
 Version 1.2 [2025-12-31]
+  #54 - Use swing-extras validation for extInfo on extension jar import
   #52 - HyperlinkUtil has been absorbed into swing-extras
   #40 - Remove tight UI coupling in ProjectManager
   #38 - Upgrade to swing-extras 2.6

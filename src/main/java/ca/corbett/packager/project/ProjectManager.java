@@ -350,8 +350,13 @@ public class ProjectManager {
      * If any field is missing or invalid, an exception is thrown.
      */
     protected void validateExtInfo(AppExtensionInfo extInfo, String expectedAppName) throws Exception {
-        // Make sure it targets the expected application:
-        // But only if we were given one to expect:
+        // Start by using isValid() supplied by swing-extras:
+        // This will ensure all required fields are present.
+        if (!extInfo.isValid()) {
+            throw new Exception("Does not specify a well-formed extInfo.json.");
+        }
+
+        // In addition, we can also check that the target app name matches (if given):
         if (expectedAppName != null) {
             if (!expectedAppName.equals(extInfo.getTargetAppName())) {
                 throw new Exception("Targets the wrong application: expected "
@@ -359,23 +364,6 @@ public class ProjectManager {
                                             + " but found "
                                             + "\"" + extInfo.getTargetAppName() + "\"");
             }
-        }
-
-        if (extInfo.getMajorVersion() == 0) {
-            throw new Exception("Extension major version is malformed: \""
-                                        + extInfo.getVersion()
-                                        + "\"");
-        }
-        if (extInfo.getTargetAppMajorVersion() == 0) {
-            throw new Exception("Target application major version is malformed: \""
-                                        + extInfo.getTargetAppVersion()
-                                        + "\"");
-        }
-        if (extInfo.getName() == null || extInfo.getName().isBlank()) {
-            throw new Exception("Extension name is missing or blank in extInfo.json.");
-        }
-        if (extInfo.getTargetAppName() == null || extInfo.getTargetAppName().isBlank()) {
-            throw new Exception("Target application name is missing or blank in extInfo.json.");
         }
     }
 
