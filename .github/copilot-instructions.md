@@ -2,14 +2,14 @@
 
 ## Repository Overview
 
-**ext-packager** is a Java Swing desktop application that helps developers package, sign, and distribute extensions for Java applications built with the swing-extras framework. It generates JSON manifests for extension discovery and updates, signs JAR files with digital signatures, and uploads extension packages to web servers.
+**ext-packager** (also called ExtPackager) is a Java Swing desktop application that helps developers package, sign, and distribute extensions for Java applications built with the swing-extras framework. It generates JSON manifests for extension discovery and updates, signs JAR files with digital signatures, and uploads extension packages to web servers.
 
 - **Language**: Java 17
-- **Version**: 1.1 is in production, 1.2 in development
+- **Version**: 1.2
 - **Build System**: Apache Maven 3.9.11
 - **Project Type**: Desktop GUI application (Swing)
 - **Size**: ~4,700 lines of Java code in 23 source files
-- **Main Dependencies**: swing-extras 2.5.0, commons-net 3.9.0, commons-io 2.19.0, FlatLaf UI themes
+- **Main Dependencies**: swing-extras 2.6.0, commons-net 3.9.0, commons-io 2.19.0, FlatLaf UI themes
 - **Test Framework**: JUnit 5 (Jupiter) with Mockito
 
 ## Build and Validation Commands
@@ -38,7 +38,7 @@ Compiles 23 Java source files to `target/classes`.
 mvn package -DskipTests
 ```
 Expected time: 8-12 seconds.
-Creates `target/ext-packager-1.2-SNAPSHOT.jar` and copies dependencies to `target/lib/`.
+Creates `target/ext-packager-1.2.jar` and copies dependencies to `target/lib/`.
 
 #### 4. Full Build (One Command)
 ```bash
@@ -85,7 +85,7 @@ src/
 ### Build Output
 ```
 target/
-├── ext-packager-1.1.jar    # Main application JAR
+├── ext-packager-1.2.jar    # Main application JAR
 ├── lib/                     # All dependency JARs (copied by maven-dependency-plugin)
 ├── classes/                 # Compiled .class files
 └── surefire-reports/        # Test execution reports
@@ -140,7 +140,7 @@ mockito-core (5.14.2)       # Mocking framework
 **Solution**: Always use `mvn package -DskipTests` for builds in CI or remote environments
 
 ### 2. Application Won't Start from JAR
-**Symptom**: Missing dependencies when running `java -jar target/ext-packager-1.1.jar`
+**Symptom**: Missing dependencies when running `java -jar target/ext-packager-1.2.jar`
 **Solution**: Ensure `target/lib/` directory is present with all dependency JARs. The manifest uses `lib/` as classpath prefix.
 
 ## Making Code Changes
@@ -163,7 +163,7 @@ mockito-core (5.14.2)       # Mocking framework
 
 ## Version and Release Information
 
-- **Current Version**: 1.1 (released 2025-12-01), 1.2 (in development)
+- **Current Version**: 1.2
 - **Version Location**: `src/main/java/ca/corbett/packager/Version.java`
 - **Release Notes**: `src/main/resources/ca/corbett/extpackager/ReleaseNotes.txt`
 - **Project URL**: https://github.com/scorbo2/ext-packager

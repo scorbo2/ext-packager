@@ -1,12 +1,11 @@
-# ext-packager
+# ExtPackager
 
 ![ExtPackager](screenshot.jpg "ExtPackager")
-TODO - update screenshot for 1.2 release
 
 ## Comprehensive documentation
 
 Refer to the [swing-extras-book](https://www.corbett.ca/swing-extras-book/app-extensions/ExtPackager.html)
-for a full guide to the extension mechanism in swing-extras, and how to use ext-packager.
+for a full guide to the extension mechanism in swing-extras, and how to use ExtPackager.
 Brief documentation is provided below.
 
 ## What is this?
@@ -17,17 +16,17 @@ Given the following:
 - You're using the AppExtension mechanism in swing-extras to allow for dynamically-loaded extensions
 - You want to use the UpdateManager in swing-extras to allow for dynamic extension discovery and download
 
-Then you can use `ext-packager` to digitally sign your extension jars, and generate the application update
+Then you can use `ExtPackager` to digitally sign your extension jars, and generate the application update
 json that will allow your application to discover your extensions, download them, and install them.
 
 ## How does it work?
 
 There are two json files that need to be generated:
 
-- the sources json that you ship with your application. This one is very small, and basically just answers the question of "where do I look for extensions?"
-- the extension version json that you host somewhere. This one is comprehensive, and answers the question "what extensions are available for which versions of my application?"
+- the update sources json that you ship with your application. This one is very small, and basically just answers the question of "where do I look for extensions?"
+- the version manifest json that you host somewhere. This one is comprehensive, and answers the question "what extensions are available for which versions of my application?"
  
-The `ext-packager` application can generate both of these for you, which saves a lot of hand-editing of json.
+The `ExtPackager` application can generate both of these for you, which saves a lot of hand-editing of json.
 
 ## Optional - Package signing
 
@@ -39,38 +38,45 @@ met to use package signing:
 - You have made the public key available on your web host
 - Your extension jars are signed with your private key
 
-The `ext-packager` application can handle all of this for you (including key pair generation).
+The `ExtPackager` application can handle all of this for you (including key pair generation).
 
 ## How do I use it?
 
 Fire up the application and walk through the UI:
 
+- Create and name a new project in ExtPackager
 - Generate a key pair (optional)
-- Enumerate and sign your extension jar(s) (signing is optional, but recommended)
-- Generate the sources json (to be bundled with your application)
-- Generate the application update json (to be hosted on your web server)
-- attach optional screenshots to your extensions
-- upload the results to your web host
-
-You can then distribute your application with the sources json included. 
-Your application can use that sources json to dynamically discover, download, install,
-and upgrade your extensions.
+- Import and sign your extension jar(s) (signing is optional, but recommended)
+- ExtPackager will generate the sources json (to be bundled with your application)
+- ExtPackager will generate the application update json (to be hosted on your web server)
+- You can attach optional screenshots to your extension versions
+- Upload the manifest and signed jars to your web host
+- Distribute your application with the sources json included
+- Create an UpdateManager instance in your application, pointing it to the sources json
+- Give this UpdateManager instance to the ExtensionManagerDialog in your application
+- That's it! Your application will be able to discover, download, install, and upgrade your extensions dynamically.
 
 ## Can I add new extensions or versions after the application is released?
 
-Yes! That's the whole point! :) By re-running `ext-packager` with your new extension(s), or new
-extension version(s), you can generate new version json to be uploaded to your web host, and your
+Yes! That's the whole point! :) By re-running `ExtPackager` with your new extension(s), or new
+extension version(s), you can generate new manifest json to be uploaded to your web host, and your
 already-distributed application can detect the new extension(s) or new version(s) and present them
-for download/upgrade. 
+for download/upgrade. Your already-distributed application does not need to be re-released or modified,
+because the extension discovery and download is all dynamic.
 
 ## What if I release a new application version?
 
-Your application will be able to detect that it is no longer the latest version, and can notify
-the user that an upgrade is available. (Application self-update not yet supported).
+Your already-installed and now out-of-date application will be able to detect that it is no longer 
+the latest version, and can notify the user that an upgrade is available. This is currently
+visible on the AboutPanel for your application, if you supply it with an UpdateManager instance,
+so that it can perform the application version check.
+
+Future versions may include the ability for applications to auto-download and install application
+upgrades, but this is not currently implemented.
 
 ## License
 
-ext-packager is made available under the MIT license: https://opensource.org/license/mit
+ExtPackager is made available under the MIT license: https://opensource.org/license/mit
 
 ## Revision history
 
