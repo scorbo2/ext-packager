@@ -48,7 +48,7 @@ Fire up the application and walk through the UI:
 - Generate a key pair (optional)
 - Import and sign your extension jar(s) (signing is optional, but recommended)
 - ExtPackager will generate the sources json (to be bundled with your application)
-- ExtPackager will generate the application update json (to be hosted on your web server)
+- ExtPackager will generate the version manifest json (to be hosted on your web server)
 - You can attach optional screenshots to your extension versions
 - Upload the manifest and signed jars to your web host
 - Distribute your application with the sources json included
