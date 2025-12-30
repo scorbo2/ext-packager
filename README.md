@@ -19,6 +19,24 @@ Given the following:
 Then you can use `ExtPackager` to digitally sign your extension jars, and generate the application update
 json that will allow your application to discover your extensions, download them, and install them.
 
+## Where do I get it?
+
+An installer tarball is available for Linux-based systems:
+- [http://www.corbett.ca/apps/ExtPackager-1.2.tar.gz](http://www.corbett.ca/apps/ExtPackager-1.2.tar.gz)
+- Size: 10MB
+- SHA-1: `efa545c37aba1955ab25d4ab95ddbe722c9d34b6`
+
+Alternatively, you can clone the source code from GitHub and build it yourself:
+- GitHub repo: [https://github.com/scorbo2/ext-packager](https://github.com/scorbo2/ext-packager)
+
+To clone and build, you'll need Maven 3.x and Java 17 installed. Then run:
+```
+git clone https://github.com/scorbo2/ext-packager.git
+cd ext-packager
+mvn package
+java -jar target/ext-packager-1.2.jar
+```
+
 ## How does it work?
 
 There are two json files that need to be generated:
