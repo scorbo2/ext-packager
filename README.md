@@ -43,7 +43,6 @@ There are two json files that need to be generated:
 
 - the update sources json that you ship with your application. This one is very small, and basically just answers the question of "where do I look for extensions?"
 - the version manifest json that you host somewhere. This one is comprehensive, and answers the question "what extensions are available for which versions of my application?"
- 
 The `ExtPackager` application can generate both of these for you, which saves a lot of hand-editing of json.
 
 ## Optional - Package signing
@@ -66,7 +65,7 @@ Fire up the application and walk through the UI:
 - Generate a key pair (optional)
 - Import and sign your extension jar(s) (signing is optional, but recommended)
 - ExtPackager will generate the sources json (to be bundled with your application)
-- ExtPackager will generate the application update json (to be hosted on your web server)
+- ExtPackager will generate the version manifest json (to be hosted on your web server)
 - You can attach optional screenshots to your extension versions
 - Upload the manifest and signed jars to your web host
 - Distribute your application with the sources json included
