@@ -25,7 +25,6 @@ There are two json files that need to be generated:
 
 - the update sources json that you ship with your application. This one is very small, and basically just answers the question of "where do I look for extensions?"
 - the version manifest json that you host somewhere. This one is comprehensive, and answers the question "what extensions are available for which versions of my application?"
- 
 The `ExtPackager` application can generate both of these for you, which saves a lot of hand-editing of json.
 
 ## Optional - Package signing
