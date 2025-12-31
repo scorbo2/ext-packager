@@ -8,7 +8,7 @@ FORMAT="tarball"
 
 # Application name/version will also be used for the jar file name.
 APPLICATION="ExtPackager"
-VERSION="1.2-SNAPSHOT"
+VERSION="1.2"
 
 # For controlling where our application icon goes in the system menu:
 CATEGORY="Development"
