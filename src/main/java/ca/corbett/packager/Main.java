@@ -52,7 +52,11 @@ public class Main {
             @Override
             public void run() {
                 if (args.length == 1) {
-                    window.setStartupProjectFile(new File(args[0]));
+                    // Linux will give us a blank argument if launched from GUI with no file.
+                    // So, just ignore it in that case.
+                    if (!args[0].isBlank()) {
+                        window.setStartupProjectFile(new File(args[0]));
+                    }
                 }
                 window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 window.setVisible(true);
