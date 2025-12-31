@@ -3,6 +3,7 @@ package ca.corbett.packager.project;
 import ca.corbett.extensions.AppExtensionInfo;
 import ca.corbett.updates.VersionManifest;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,18 +17,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class ProjectManagerTest {
+public class ProjectManagerTest {
 
-    File projectDir;
+    private File projectDir;
+    private static ProjectManager projectManager;
+
+    @BeforeAll
+    public static void initialize() {
+        projectManager = ProjectManager.getInstance();
+    }
 
     @BeforeEach
     public void setup() throws Exception {
-        projectDir = new File(System.getProperty("java.io.tmpdir"), "test");
-        ProjectManager.getInstance().newProject("Test", projectDir);
+        // Create a new temporary project directory for each test so the tests don't interfere with each other:
+        projectDir = new File(System.getProperty("java.io.tmpdir"), "projectManagerTest_" + System.currentTimeMillis());
+        projectManager.newProject("Test", projectDir);
     }
 
     @AfterEach
     public void tearDown() throws IOException {
+        // Close and delete the project directory after each test:
+        projectManager.close();
         deleteDirectoryRecursively(projectDir);
     }
 
@@ -35,7 +45,7 @@ class ProjectManagerTest {
     public void computeExtensionFilePath_givenValidRoot_shouldResolve() throws Exception {
         final File expected = new File(projectDir, "dist/test.txt");
         String path = "test.txt";
-        File actual = ProjectManager.getInstance().getProjectFileFromPath(path);
+        File actual = projectManager.getProjectFileFromPath(path);
         assertNotNull(actual);
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }
@@ -44,7 +54,7 @@ class ProjectManagerTest {
     public void computeExtensionFilePath_givenValidNonRoot_shouldResolve() throws Exception {
         final File expected = new File(projectDir, "dist/a/b/c/test.txt");
         String path = "a/b/c/test.txt";
-        File actual = ProjectManager.getInstance().computeExtensionFile(null, path);
+        File actual = projectManager.computeExtensionFile(null, path);
         assertNotNull(actual);
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }
@@ -57,7 +67,7 @@ class ProjectManagerTest {
                                    .setTargetAppName("Test")
                                    .setTargetAppVersion("1.0")
                                    .build());
-        File actual = ProjectManager.getInstance().computeExtensionFile(version, "MyExtension-1.0.0.jar");
+        File actual = projectManager.computeExtensionFile(version, "MyExtension-1.0.0.jar");
         assertNotNull(actual);
         assertEquals(expected.getAbsolutePath(), actual.getAbsolutePath());
     }
@@ -72,7 +82,204 @@ class ProjectManagerTest {
         assertEquals("hello", ProjectManager.getBasename("path/to/hello.txt"));
     }
 
-    private static void deleteDirectoryRecursively(File rootDir) throws IOException {
+    @Test
+    public void validateExtInfo_withValidFields_shouldPass() throws Exception {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("1.0.0")
+                .build();
+        projectManager.validateExtInfo(extInfo, "TestApp");
+    }
+
+    @Test
+    public void validateExtInfo_withWrongTargetAppName_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("OtherApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("1.0.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Targets the wrong application: expected \"TestApp\" but found \"OtherApp\"",
+                     exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withBlankName_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("1.0.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withBlankVersion_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withBlankTargetAppVersion_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("")
+                .setVersion("1.0.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withBlankTargetAppName_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("")
+                .setTargetAppVersion("1.0")
+                .setVersion("1.0.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withMalformedVersion_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("1.0")
+                .setVersion("That ain't no version string!")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void validateExtInfo_withMalformedTargetAppVersion_shouldThrow() {
+        AppExtensionInfo extInfo = new AppExtensionInfo.Builder("MyExtension")
+                .setTargetAppName("TestApp")
+                .setTargetAppVersion("That ain't no version string!")
+                .setVersion("1.0")
+                .build();
+        Exception exception = null;
+        try {
+            projectManager.validateExtInfo(extInfo, "TestApp");
+        }
+        catch (Exception e) {
+            exception = e;
+        }
+        assertNotNull(exception);
+        assertEquals("Does not specify a well-formed extInfo.json.", exception.getMessage());
+    }
+
+    @Test
+    public void switchExtension_withValidExtension_shouldSucceed() throws Exception {
+        // GIVEN a file path with a valid extension:
+        final String filePath = "extensions/MyExtension-1.0.0.jar";
+
+        // WHEN switching the extension to "zip":
+        final String newFilePath = projectManager.switchExtension(filePath, "zip");
+
+        // THEN the new file path should have the "zip" extension:
+        assertEquals("extensions/MyExtension-1.0.0.zip", newFilePath);
+    }
+
+    @Test
+    public void switchExtension_withoutExtension_shouldAddNewExtension() throws Exception {
+        // GIVEN a file path without an extension:
+        final String filePath = "extensions/MyExtension";
+
+        // WHEN switching the extension to "jar":
+        final String newFilePath = projectManager.switchExtension(filePath, "jar");
+
+        // THEN the new file path should have the "jar" extension:
+        assertEquals("extensions/MyExtension.jar", newFilePath);
+    }
+
+    @Test
+    public void switchExtension_withMultipleExtensions_shouldReplaceLastExtension() throws Exception {
+        // GIVEN a file path with multiple extensions:
+        final String filePath = "extensions/My.Extension.Name-1.0.0.tar.gz";
+
+        // WHEN switching the extension to "zip":
+        final String newFilePath = projectManager.switchExtension(filePath, "zip");
+
+        // THEN the new file path should have the "zip" extension:
+        assertEquals("extensions/My.Extension.Name-1.0.0.tar.zip", newFilePath);
+    }
+
+    @Test
+    public void switchExtension_withDotInPathButNotInFilename_shouldAddExtensionCorrectly() throws Exception {
+        // GIVEN a file path with a dot in the directory path but not in the filename:
+        final String filePath = "extensions/v1.0/MyExtension";
+
+        // WHEN switching the extension to "jar":
+        final String newFilePath = projectManager.switchExtension(filePath, "jar");
+
+        // THEN the new file path should have the "jar" extension:
+        assertEquals("extensions/v1.0/MyExtension.jar", newFilePath);
+    }
+
+    @Test
+    public void switchExtension_withNoExtension_shouldAddExtension() throws Exception {
+        // GIVEN a file path with no extension:
+        final String filePath = "extensions/MyExtension";
+
+        // WHEN switching the extension to "zip":
+        final String newFilePath = projectManager.switchExtension(filePath, "zip");
+
+        // THEN the new file path should have the "zip" extension:
+        assertEquals("extensions/MyExtension.zip", newFilePath);
+    }
+
+    public static void deleteDirectoryRecursively(File rootDir) throws IOException {
         Path path = rootDir.toPath();
         if (Files.exists(path)) {
             Files.walk(path)

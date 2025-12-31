@@ -1,6 +1,20 @@
 ExtPackager Release Notes
 Author: Steve Corbett
 
+Version 1.2 [2025-12-31]
+  #54 - Use swing-extras validation for extInfo on extension jar import
+  #52 - HyperlinkUtil has been absorbed into swing-extras
+  #40 - Remove tight UI coupling in ProjectManager
+  #38 - Upgrade to swing-extras 2.6
+  #37 - Decouple MainWindow from other classes
+  #35 - Additional validation of extInfo on import
+  #34 - Add check for target dir existence on local deploy
+  #33 - Add link to swing-extras-book from README
+  #32 - Store FTP params per update source, not app-wide
+  #31 - Fix cleanup bug in delete app version
+  #30 - Fix wonky label on target dir clean checkbox
+  #29 - Fix UI validation wonkiness in update source dialog
+
 Version 1.1 [2025-12-01]
   #28 - add make-installer support
   #27 - fix multiple bugs in FTPUtil

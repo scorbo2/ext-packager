@@ -2,13 +2,14 @@
 
 ## Repository Overview
 
-**ext-packager** is a Java Swing desktop application that helps developers package, sign, and distribute extensions for Java applications built with the swing-extras framework. It generates JSON manifests for extension discovery and updates, signs JAR files with digital signatures, and uploads extension packages to web servers.
+**ext-packager** (also called ExtPackager) is a Java Swing desktop application that helps developers package, sign, and distribute extensions for Java applications built with the swing-extras framework. It generates JSON manifests for extension discovery and updates, signs JAR files with digital signatures, and uploads extension packages to web servers.
 
 - **Language**: Java 17
+- **Version**: 1.2
 - **Build System**: Apache Maven 3.9.11
 - **Project Type**: Desktop GUI application (Swing)
 - **Size**: ~4,700 lines of Java code in 23 source files
-- **Main Dependencies**: swing-extras 2.5.0, commons-net 3.9.0, commons-io 2.19.0, FlatLaf UI themes
+- **Main Dependencies**: swing-extras 2.6.0, commons-net 3.9.0, commons-io 2.19.0, FlatLaf UI themes
 - **Test Framework**: JUnit 5 (Jupiter) with Mockito
 
 ## Build and Validation Commands
@@ -37,30 +38,13 @@ Compiles 23 Java source files to `target/classes`.
 mvn package -DskipTests
 ```
 Expected time: 8-12 seconds.
-Creates `target/ext-packager-1.1.jar` and copies dependencies to `target/lib/`.
-**IMPORTANT**: Always use `-DskipTests` flag because tests require a graphical environment.
+Creates `target/ext-packager-1.2.jar` and copies dependencies to `target/lib/`.
 
 #### 4. Full Build (One Command)
 ```bash
 mvn clean package -DskipTests
 ```
 This is the recommended command for a complete build from scratch.
-
-### Test Execution
-
-**CRITICAL**: Tests **CANNOT** run in headless environments (CI servers, remote terminals without X11).
-
-The test suite requires a GUI environment because:
-- Tests instantiate `MainWindow` (a JFrame) during setup
-- The Swing UI initialization requires an X11 DISPLAY or equivalent
-- Tests fail with `java.awt.HeadlessException` in headless mode
-
-**Running tests locally with GUI**:
-```bash
-mvn test
-```
-
-**Known Issue**: The current test setup does not support headless testing. If you need to run tests in CI, the tests would need to be refactored to mock UI components.
 
 ### Installation Package Generation
 
@@ -101,7 +85,7 @@ src/
 ### Build Output
 ```
 target/
-├── ext-packager-1.1.jar    # Main application JAR
+├── ext-packager-1.2.jar    # Main application JAR
 ├── lib/                     # All dependency JARs (copied by maven-dependency-plugin)
 ├── classes/                 # Compiled .class files
 └── surefire-reports/        # Test execution reports
@@ -134,7 +118,7 @@ target/
 
 ### Runtime Dependencies (from pom.xml)
 ```xml
-swing-extras (2.5.0)        # Custom Swing components and extension framework
+swing-extras (2.6.0)        # Custom Swing components and extension framework
 commons-net (3.9.0)         # FTP upload functionality
 commons-io (2.19.0)         # File I/O utilities
 ```
@@ -156,12 +140,8 @@ mockito-core (5.14.2)       # Mocking framework
 **Solution**: Always use `mvn package -DskipTests` for builds in CI or remote environments
 
 ### 2. Application Won't Start from JAR
-**Symptom**: Missing dependencies when running `java -jar target/ext-packager-1.1.jar`
+**Symptom**: Missing dependencies when running `java -jar target/ext-packager-1.2.jar`
 **Solution**: Ensure `target/lib/` directory is present with all dependency JARs. The manifest uses `lib/` as classpath prefix.
-
-### 3. Compiler Warnings
-**Known Warning**: "Some input files use unchecked or unsafe operations" in `IntroCard.java`
-This is expected and does not affect functionality.
 
 ## Making Code Changes
 
@@ -173,7 +153,7 @@ This is expected and does not affect functionality.
 ### After Making Changes
 1. Compile: `mvn compile` (to check for compilation errors)
 2. Package: `mvn package -DskipTests` (to verify the build succeeds)
-3. If modifying tests: Run `mvn test` locally with GUI environment
+3. If modifying tests: Run `mvn test` locally
 4. Verify your code follows editorconfig style (4-space indent, 120-char line limit)
 
 ### Testing Strategy
@@ -183,7 +163,7 @@ This is expected and does not affect functionality.
 
 ## Version and Release Information
 
-- **Current Version**: 1.1 (released 2025-12-01)
+- **Current Version**: 1.2
 - **Version Location**: `src/main/java/ca/corbett/packager/Version.java`
 - **Release Notes**: `src/main/resources/ca/corbett/extpackager/ReleaseNotes.txt`
 - **Project URL**: https://github.com/scorbo2/ext-packager

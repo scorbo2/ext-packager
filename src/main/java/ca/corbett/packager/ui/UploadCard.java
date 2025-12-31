@@ -3,7 +3,6 @@ package ca.corbett.packager.ui;
 import ca.corbett.extras.MessageUtil;
 import ca.corbett.extras.progress.MultiProgressDialog;
 import ca.corbett.extras.progress.SimpleProgressAdapter;
-import ca.corbett.extras.properties.Properties;
 import ca.corbett.forms.Alignment;
 import ca.corbett.forms.FormPanel;
 import ca.corbett.forms.Margins;
@@ -16,7 +15,6 @@ import ca.corbett.forms.fields.PasswordField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.forms.validators.FieldValidator;
 import ca.corbett.forms.validators.ValidationResult;
-import ca.corbett.packager.AppConfig;
 import ca.corbett.packager.io.FileSystemUploadThread;
 import ca.corbett.packager.io.FtpParams;
 import ca.corbett.packager.io.FtpUploadThread;
@@ -32,6 +30,7 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.io.File;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.logging.Logger;
@@ -92,23 +91,22 @@ public class UploadCard extends JPanel implements ProjectListener {
         formPanel.add(targetDirField);
 
         // Controls specific to ftp-based upload sources:
-        Properties props = AppConfig.getInstance().getPropertiesManager().getPropertiesInstance();
         ftpHostField = new ShortTextField("Host:", 15);
         ftpHostField.setVisible(false);
         ftpHostField.setAllowBlank(false);
-        ftpHostField.setText(props.getString("ftpHost", ""));
+        ftpHostField.setText("");
         ftpUsernameField = new ShortTextField("Username:", 15);
         ftpUsernameField.setVisible(false);
         ftpUsernameField.setAllowBlank(false);
-        ftpUsernameField.setText(props.getString("ftpUser", ""));
+        ftpUsernameField.setText("");
         ftpPasswordField = new PasswordField("Password:", 15);
         ftpPasswordField.setVisible(false);
         ftpPasswordField.setAllowBlank(false);
-        ftpPasswordField.setPassword(props.getString("ftpPass", ""));
+        ftpPasswordField.setPassword("");
         ftpTargetDirField = new ShortTextField("Target dir:", 15);
         ftpTargetDirField.setVisible(false);
         ftpTargetDirField.setAllowBlank(false);
-        ftpTargetDirField.setText(props.getString("ftpDir", ""));
+        ftpTargetDirField.setText("");
         ftpSaveParamsCheckbox = new CheckBoxField("Save FTP parameters", true);
         ftpSaveParamsCheckbox.setVisible(false);
         cleanDirBeforeUpload = new CheckBoxField("Clean FTP directory before upload", true);
@@ -153,6 +151,16 @@ public class UploadCard extends JPanel implements ProjectListener {
         }
         else {
             setFtpUploadControlsVisible(true);
+            try {
+                FtpParams ftpParams = FtpParams.fromUpdateSource(project, updateSource);
+                ftpHostField.setText(ftpParams.host);
+                ftpUsernameField.setText(ftpParams.username);
+                ftpPasswordField.setPassword(ftpParams.password);
+                ftpTargetDirField.setText(ftpParams.targetDir);
+            }
+            catch (IOException ioe) {
+                log.warning("Unable to load saved FTP params: " + ioe.getMessage());
+            }
         }
 
         formPanel.validateForm(); // revalidate form as visible controls may have changed.
@@ -160,6 +168,7 @@ public class UploadCard extends JPanel implements ProjectListener {
 
     private void setFileUploadControlsVisible(boolean visible) {
         targetDirField.setVisible(visible);
+        cleanDirBeforeUpload.setCheckBoxText("Clean target directory before copying");
     }
 
     private void setFtpUploadControlsVisible(boolean visible) {
@@ -168,6 +177,7 @@ public class UploadCard extends JPanel implements ProjectListener {
         ftpPasswordField.setVisible(visible);
         ftpTargetDirField.setVisible(visible);
         ftpSaveParamsCheckbox.setVisible(visible);
+        cleanDirBeforeUpload.setCheckBoxText("Clean FTP directory before upload");
     }
 
     private void doUpload() {
@@ -197,17 +207,20 @@ public class UploadCard extends JPanel implements ProjectListener {
 
         UpdateSources.UpdateSource updateSource = updateSources.get(sourceCombo.getSelectedIndex());
         if (updateSource.getBaseUrl().getProtocol().equalsIgnoreCase("file")) {
-            FileSystemUploadThread worker = new FileSystemUploadThread(project,
-                                                                       new File(targetDirField.getText()),
-                                                                       cleanDirBeforeUpload.isChecked());
-            worker.addProgressListener(new UploadProgressListener());
-            new MultiProgressDialog(MainWindow.getInstance(), "Filesystem upload")
-                    .runWorker(worker, true);
+            File targetDir = new File(targetDirField.getText());
+            if (isTargetDirValid(targetDir)) {
+                FileSystemUploadThread worker = new FileSystemUploadThread(project,
+                                                                           targetDir,
+                                                                           cleanDirBeforeUpload.isChecked());
+                worker.addProgressListener(new UploadProgressListener());
+                new MultiProgressDialog(MainWindow.getInstance(), "Filesystem upload")
+                        .runWorker(worker, true);
+            }
         }
         else {
             FtpUploadThread worker = new FtpUploadThread(project,
                                                          updateSource,
-                                                         buildFtpParams(),
+                                                         buildFtpParams(project, updateSource),
                                                          cleanDirBeforeUpload.isChecked());
             worker.addProgressListener(new UploadProgressListener());
             new MultiProgressDialog(MainWindow.getInstance(), "FTP upload")
@@ -215,7 +228,52 @@ public class UploadCard extends JPanel implements ProjectListener {
         }
     }
 
-    private FtpParams buildFtpParams() {
+    /**
+     * Invoked internally during a local filesystem deploy to make sure
+     * that the given target directory exists, is an actual directory, and
+     * is writable.
+     */
+    private boolean isTargetDirValid(File targetDir) {
+        if (targetDir == null) {
+            getMessageUtil().error("Invalid target directory", "The target directory is null.");
+            return false;
+        }
+
+        // Make sure target dir exists, or offer to create it:
+        if (!targetDir.exists()) {
+            if (JOptionPane.showConfirmDialog(MainWindow.getInstance(),
+                                              "Target directory does not exist. Create it and proceed?",
+                                              "Confirm",
+                                              JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION) {
+                return false;
+            }
+            if (!targetDir.mkdirs()) {
+                getMessageUtil().error("Cannot create target directory",
+                                       "The target directory '"
+                                               + targetDir.getAbsolutePath()
+                                               + "' could not be created.");
+                return false;
+            }
+        }
+
+        // Make sure target dir is an actual directory:
+        if (!targetDir.isDirectory()) {
+            getMessageUtil().error("Invalid target directory",
+                                   "The target directory '" + targetDir.getAbsolutePath() + "' is not a directory.");
+            return false;
+        }
+
+        // Make sure we can write to the target dir:
+        if (!targetDir.canWrite()) {
+            getMessageUtil().error("Cannot write to target directory",
+                                   "The target directory '" + targetDir.getAbsolutePath() + "' is not writable.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private FtpParams buildFtpParams(Project project, UpdateSources.UpdateSource source) {
         FtpParams params = new FtpParams();
         params.host = ftpHostField.getText();
         params.username = ftpUsernameField.getText();
@@ -223,19 +281,31 @@ public class UploadCard extends JPanel implements ProjectListener {
         params.password = ftpPasswordField.getPassword();
 
         // Save all ftp props if directed, or blank them out otherwise:
-        Properties props = AppConfig.getInstance().getPropertiesManager().getPropertiesInstance();
-        props.setString("ftpHost", ftpSaveParamsCheckbox.isChecked() ? ftpHostField.getText() : "");
-        props.setString("ftpUser", ftpSaveParamsCheckbox.isChecked() ? ftpUsernameField.getText() : "");
-        props.setString("ftpDir", ftpSaveParamsCheckbox.isChecked() ? ftpTargetDirField.getText() : "");
-        props.setString("ftpPass", ftpSaveParamsCheckbox.isChecked() ? ftpPasswordField.getPassword() : "");
-        AppConfig.getInstance().save();
+        // (this means we nuke the saved settings if the user unchecks the box)
+        try {
+            FtpParams.save(project, source, ftpSaveParamsCheckbox.isChecked() ? params : FtpParams.of());
+        }
+        catch (IOException ioe) {
+            log.warning("Unable to save FTP params: " + ioe.getMessage());
+        }
 
         return params;
     }
 
-    private void validateForm() {
-        Project project = ProjectManager.getInstance().getProject();
+    /**
+     * Populate the source combo from the given project, or clear it if project is null.
+     */
+    private void populateSourceFromProject(Project project) {
+        sourceCombo.getComboModel().removeAllElements();
+        if (project == null || project.getUpdateSources() == null) {
+            return;
+        }
+        for (UpdateSources.UpdateSource source : project.getUpdateSources().getUpdateSources()) {
+            sourceCombo.getComboModel().addElement(source.getName());
+        }
+    }
 
+    private void validateForm(Project project) {
         if (project == null) {
             setAllValidation("No project loaded.");
             formPanel.validateForm();
@@ -243,18 +313,12 @@ public class UploadCard extends JPanel implements ProjectListener {
         }
 
         setAllValidation(null);
-        sourceCombo.getComboModel().removeAllElements();
 
         if (project.getPrivateKey() == null || project.getPublicKey() == null) {
             keyPairValidator.setMessage("Project has no key pair - unable to sign.");
         }
         if (project.getUpdateSources() == null || project.getUpdateSources().getUpdateSources().isEmpty()) {
             updateSourceValidator.setMessage("Project has no update source defined.");
-        }
-        else {
-            for (UpdateSources.UpdateSource source : project.getUpdateSources().getUpdateSources()) {
-                sourceCombo.getComboModel().addElement(source.getName());
-            }
         }
         List<File> jarFiles = ProjectManager.getInstance().findAllJars(project);
         if (jarFiles.isEmpty()) {
@@ -281,14 +345,39 @@ public class UploadCard extends JPanel implements ProjectListener {
         jarsSignedValidator.setMessage(message);
     }
 
+    /**
+     * Invoked before a project is loaded - no action needed.
+     */
     @Override
-    public void projectLoaded(Project project) {
-        validateForm();
+    public void projectWillLoad(Project ignored) {
+        // No action needed
     }
 
+    /**
+     * Fired after a project has been loaded.
+     */
+    @Override
+    public void projectLoaded(Project project) {
+        populateSourceFromProject(project);
+        validateForm(project);
+    }
+
+    /**
+     * Fired after a project has been saved.
+     */
     @Override
     public void projectSaved(Project project) {
-        validateForm();
+        populateSourceFromProject(project);
+        validateForm(project);
+    }
+
+    /**
+     * Fired after a project has been closed.
+     */
+    @Override
+    public void projectClosed(Project project) {
+        formPanel.clearValidationResults();
+        populateSourceFromProject(null);
     }
 
     private static class CheckValidator implements FieldValidator<FormField> {

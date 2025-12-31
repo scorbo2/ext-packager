@@ -36,6 +36,8 @@ public class JarSigningCard extends JPanel implements ProjectListener {
 
     private static final Logger log = Logger.getLogger(JarSigningCard.class.getName());
 
+    private static final String INITIAL_TEXT = "Not yet scanned.";
+
     private MessageUtil messageUtil;
     private final LabelField statusLabel;
 
@@ -45,7 +47,7 @@ public class JarSigningCard extends JPanel implements ProjectListener {
         formPanel.setBorderMargin(new Margins(12));
         formPanel.add(LabelField.createBoldHeaderLabel("Jar signing", 20));
 
-        statusLabel = new LabelField("Status:", "Not yet scanned.");
+        statusLabel = new LabelField("Status:", INITIAL_TEXT);
         formPanel.add(statusLabel);
         formPanel.add(buildButtonField());
 
@@ -293,14 +295,36 @@ public class JarSigningCard extends JPanel implements ProjectListener {
         statusLabel.setText(jarFiles.size() + " jar files present; " + sigFiles.size() + " are signed.");
     }
 
+    /**
+     * Invoked when a project is about to be loaded - we ignore this.
+     */
+    @Override
+    public void projectWillLoad(Project ignored) {
+        // Nothing to do.
+    }
+
+    /**
+     * Invoked after a project has been loaded - we reset our display.
+     */
     @Override
     public void projectLoaded(Project project) {
         reset();
     }
 
+    /**
+     * Invoked after a project has been saved - we reset our display.
+     */
     @Override
     public void projectSaved(Project project) {
         reset();
+    }
+
+    /**
+     * Invoked after a project has been closed - we reset our display.
+     */
+    @Override
+    public void projectClosed(Project project) {
+        statusLabel.setText(INITIAL_TEXT);
     }
 
     private MessageUtil getMessageUtil() {

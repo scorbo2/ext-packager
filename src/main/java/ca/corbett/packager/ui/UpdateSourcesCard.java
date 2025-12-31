@@ -12,6 +12,7 @@ import ca.corbett.forms.fields.PanelField;
 import ca.corbett.forms.fields.ShortTextField;
 import ca.corbett.forms.validators.FieldValidator;
 import ca.corbett.forms.validators.ValidationResult;
+import ca.corbett.packager.io.FtpParams;
 import ca.corbett.packager.project.Project;
 import ca.corbett.packager.project.ProjectListener;
 import ca.corbett.packager.project.ProjectManager;
@@ -133,6 +134,23 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
             JOptionPane.showMessageDialog(MainWindow.getInstance(), "Nothing selected.");
             return;
         }
+
+        // Make a note of the name and whether it had a saved FTP params file:
+        Project project = ProjectManager.getInstance().getProject();
+        UpdateSources.UpdateSource updateSource = sourcesListField.getList().getSelectedValue();
+        String oldName = updateSource.getName();
+        FtpParams oldParams = null;
+        if (FtpParams.ftpParamsExist(project, updateSource)) {
+            try {
+                FtpParams.fromUpdateSource(project, updateSource);
+            }
+            catch (IOException ioe) {
+                // Just log the error, this isn't fatal:
+                log.warning("Error loading existing FTP parameters for update source: " + ioe.getMessage());
+            }
+        }
+
+        // Let the user edit the source:
         UpdateSourceDialog dialog = new UpdateSourceDialog("Edit update source");
         dialog.setUpdateSource(sourcesListField.getList().getSelectedValue());
         dialog.setVisible(true);
@@ -140,10 +158,23 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
             return;
         }
 
-        DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
-        listModel.insertElementAt(dialog.getUpdateSource(), selectedIndexes[0]); // insert new element
-        listModel.removeElementAt(selectedIndexes[0] + 1); // remove old element which got bumped by one
+        // Insert the new one and then remove the old one:
+        UpdateSources.UpdateSource newSource = dialog.getUpdateSource();
+        sourcesListField.getListModel().insertElementAt(newSource, selectedIndexes[0]);
+        sourcesListField.getListModel().removeElementAt(selectedIndexes[0] + 1);
         saveChanges();
+
+        // If the user renamed the source, and there were FTP parameters saved for the old source,
+        // we need to migrate those settings to the new name:
+        if (!oldName.equals(newSource.getName()) && oldParams != null) {
+            try {
+                FtpParams.save(project, newSource, oldParams);
+            }
+            catch (IOException ioe) {
+                // Just log the error, this isn't fatal:
+                log.warning("Error saving migrated FTP parameters for update source: " + ioe.getMessage());
+            }
+        }
     }
 
     /**
@@ -186,38 +217,57 @@ public class UpdateSourcesCard extends JPanel implements ProjectListener {
     }
 
     private void populateFields(Project project) {
-        // Dumb initial value in case the proper application name is not set:
-        if (project == null || project.getUpdateSources() == null) {
-            appNameField.setText("");
-        }
+        // Blank out our current values:
+        appNameField.setText("");
+        sourcesListField.getListModel().clear();
 
-        DefaultListModel<UpdateSources.UpdateSource> listModel = (DefaultListModel<UpdateSources.UpdateSource>)sourcesListField.getListModel();
-        listModel.clear();
-
+        // If there's no project or no update sources, we're done:
         if (project == null || project.getUpdateSources() == null) {
             return;
         }
 
+        // Populate our update sources list:
         for (UpdateSources.UpdateSource updateSource : project.getUpdateSources().getUpdateSources()) {
-            listModel.addElement(updateSource);
+            sourcesListField.getListModel().addElement(updateSource);
         }
 
-        // Now we can set a more intelligent default value for application name:
+        // Populate our application name:
         appNameField.setText(project.getUpdateSources().getApplicationName());
     }
 
     /**
-     * We listen for Project events, so that we can load our update sources list from a Project
-     * when one is opened.
+     * Fired just before a Project is loaded - we don't need to do anything here.
+     */
+    @Override
+    public void projectWillLoad(Project ignored) {
+        // No action needed
+    }
+
+    /**
+     * Fired when a Project is loaded - we update our fields to reflect the current project's update sources.
      */
     @Override
     public void projectLoaded(Project project) {
         populateFields(project);
     }
 
+    /**
+     * Fired when a Project is saved - we update our fields to reflect any changes.
+     *
+     * @param project
+     */
     @Override
     public void projectSaved(Project project) {
         populateFields(project);
+    }
+
+    /**
+     * Fired when the current Project is closed - we blank out our fields.
+     * @param project
+     */
+    @Override
+    public void projectClosed(Project project) {
+        populateFields(null);
     }
 
     /**

@@ -73,6 +73,7 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     private final ListField<VersionManifest.ExtensionVersion> extensionVersionListField;
     private boolean autoSave = false;
 
+    @SuppressWarnings("unchecked")
     public VersionManifestCard() {
         setLayout(new BorderLayout());
         formPanel = new FormPanel(Alignment.TOP_LEFT);
@@ -88,12 +89,10 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         formPanel.add(appVersionListField);
         formPanel.add(buildAppVersionButtonPanel());
 
-        //noinspection unchecked
         extensionListField = (ListField<VersionManifest.Extension>)buildExtensionListField();
         formPanel.add(extensionListField);
         formPanel.add(buildExtensionButtonPanel());
 
-        //noinspection unchecked
         extensionVersionListField = (ListField<VersionManifest.ExtensionVersion>)buildExtensionVersionListField();
         formPanel.add(extensionVersionListField);
         formPanel.add(buildExtensionVersionButtonPanel());
@@ -164,9 +163,8 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
             return;
         }
 
-        DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
-        VersionManifest.ApplicationVersion appVersion = listModel.getElementAt(selectedIndex);
-        listModel.removeElementAt(selectedIndex);
+        VersionManifest.ApplicationVersion appVersion = appVersionListField.getListModel().getElementAt(selectedIndex);
+        appVersionListField.getListModel().removeElementAt(selectedIndex);
         try {
             ProjectManager.getInstance().removeApplicationVersion(appVersion); // file cleanup
         }
@@ -320,14 +318,18 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         autoSave = false; // wait until we're fully populated before saving
 
         try {
-            // Dumb initial value in case the proper application name is not set:
+            // Blank out our current values:
+            appNameField.setText("");
+            appVersionListField.getListModel().clear();
+            extensionListField.getListModel().clear();
+            extensionVersionListField.getListModel().clear();
+
+            // If we have no manifest, we're done:
             if (versionManifest == null) {
-                appNameField.setText("");
                 return;
             }
 
-            DefaultListModel<VersionManifest.ApplicationVersion> listModel = (DefaultListModel<VersionManifest.ApplicationVersion>)appVersionListField.getListModel();
-            listModel.clear();
+            // Populate based on given manifest:
             List<VersionManifest.ApplicationVersion> sortedList = versionManifest
                     .getApplicationVersions()
                     .stream()
@@ -347,6 +349,14 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
     }
 
     /**
+     * Fired when a project is about to be loaded - we don't need to do anything here.
+     */
+    @Override
+    public void projectWillLoad(Project ignored) {
+        // No action needed
+    }
+
+    /**
      * We listen for project events so that when a project is loaded, we can parse out the
      * version manifest from it and display it here.
      */
@@ -355,9 +365,21 @@ public class VersionManifestCard extends JPanel implements ProjectListener {
         populateFields(project.getVersionManifest());
     }
 
+    /**
+     * Fired when the current project is saved. We repopulate our fields in case the
+     * version manifest changed.
+     */
     @Override
     public void projectSaved(Project project) {
         populateFields(project.getVersionManifest());
+    }
+
+    /**
+     * Fired when the current project is closed. We clear our fields.
+     */
+    @Override
+    public void projectClosed(Project project) {
+        populateFields(null);
     }
 
     /**
