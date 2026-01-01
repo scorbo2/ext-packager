@@ -24,8 +24,8 @@ json that will allow your application to discover your extensions, download them
 An installer tarball is available for Linux-based systems:
 - [http://www.corbett.ca/apps/ExtPackager-1.2.tar.gz](http://www.corbett.ca/apps/ExtPackager-1.2.tar.gz)
 - Size: 10MB
-- SHA-1: `f2cd4f9797b874c9fb83b80bbe72adab75614be2`
-- SHA-256: `a6379fed42804b90765830e97e3b621cb1f7bf6e5d53e7c9cf4f8f3deb834db1`
+- SHA-1: `3327ec93438993639f931ae7432aa3f2beb0a36f`
+- SHA-256: `4dbec8e11d8e4886796fec252474559ce2b4676ec76c2fd36f760b6f7d85fa67`
 
 Alternatively, you can clone the source code from GitHub and build it yourself:
 - GitHub repo: [https://github.com/scorbo2/ext-packager](https://github.com/scorbo2/ext-packager)
